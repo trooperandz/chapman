@@ -1,0 +1,5 @@
+[10-Oct-2016 17:50:06 UTC] PHP Fatal error:  Call to a member function getDealerInfo() on a non-object in /home/sosfirm/public_html/edumix/HTML/system/class/class.Modal.inc.php on line 379
+[10-Oct-2016 17:53:26 UTC] PHP Fatal error:  Call to a member function getDealerInfo() on a non-object in /home/sosfirm/public_html/edumix/HTML/system/class/class.Modal.inc.php on line 536
+[31-Oct-2016 18:21:56 UTC] PHP Catchable fatal error:  Object of class PDOStatement could not be converted to string in /home/sosfirm/public_html/edumix/HTML/system/class/class.UserInfo.inc.php on line 78
+[31-Oct-2016 18:22:16 UTC] PHP Catchable fatal error:  Object of class PDOStatement could not be converted to string in /home/sosfirm/public_html/edumix/HTML/system/class/class.UserInfo.inc.php on line 78
+[08-Nov-2016 17:59:31 UTC] PHP Parse error:  syntax error, unexpected ''#'' (T_CONSTANT_ENCAPSED_STRING), expecting ',' or ';' in /home/sosfirm/public_html/edumix/HTML/index_test.php on line 99

@@ -1,0 +1,16 @@
+To do (& notes):
+
+10/6/14
+Take maxvol_ebay and maxvol_sbay out of roimpact menu (these items must be altered by admin).
+
+These items are entered by the consultant:
+	days per week
+	hours per day
+	quantity of bays
+	# express bays selected
+	
+*Remember to add warning functionality =>
+	if an express bay is at at least 80% capacity, warning needs to go up that says "You may want to consider adding another bay."
+	if an express by is at 100% capacity, you need a warning that says "You need to add another bay."
+	
+

@@ -1,0 +1,48 @@
+*{
+	margin: 0;
+}
+
+html, body {
+	height: 100%;
+}
+
+.wrapper {
+	min-height: 100%;
+	height: auto !important;
+	height: 100%;
+	margin: 0 auto -4em;
+}
+
+footer {
+	height: 4.25em;
+	font-size: 15px;  
+	font-weight: bold;
+	color: #CCCCCC;  
+	background-color: #222222;
+}
+
+.footer_span {
+	position: relative; 
+	top: 50%; 
+	transform: translateY(-50%);
+	margin-left: 1.5em;
+	float: left;
+}
+
+.footer_feedback {
+	position: relative; 
+	top: 50%; 
+	transform: translateY(-50%);
+	float: right;
+	margin-right: 1.5em;
+	margin-top: .2em;
+}
+
+.copyright {
+	font-size: 12px;
+	color: #46BCDE;
+}
+
+.push {
+	height: 4em;	 
+}

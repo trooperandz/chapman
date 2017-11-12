@@ -1,0 +1,6 @@
+*To do
+
+-class.Admin.inc.php
+	1) Replace user email reference 'CONTACT_EMAIL' with SESSION user email after completing login revamp
+	2) Replace user ID session variable with official session var after final revamp is complete (line 374 db insert)
+	

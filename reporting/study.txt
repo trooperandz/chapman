@@ -1,0 +1,56 @@
+*PDO
+	Standard connection instruction:
+	
+*Building queries dynamically
+
+	// Set search array items
+	$array = array('dealer_id'=>271, 'date_range'=>true, 'region_id'=> 7, 'advisor_id'=>12);
+
+	// Initialize $stmt and build query dynamically
+	$stmt = array();
+	$stmt[] = "SELECT COUNT(ronumber) FROM repairorder_welr a
+			  LEFT JOIN dealer b ON(a.dealerID = b.dealerID) ";
+		
+	if($array['dealer_id']) {
+		$dealer_id = 271;
+		$stmt[] = "a.dealerID = $dealer_id ";
+	}
+
+	// If date_range == true, add BETWEEN statement for count
+	if($array['date_range']) {
+		$metrics_date_range1 = '2016-03-01';
+		$metrics_date_range2 = '2016-03-17';
+		$stmt[] = "a.ro_date BETWEEN '$metrics_date_range1' AND '$metrics_date_range2' ";
+	}
+
+	if($array['region_id']) {
+		$region_id = $array['region_id'];
+		$stmt[] = "b.regionID = $region_id ";
+	}
+
+	if($array['advisor_id']) {
+		$advisor_id = $array['advisor_id'];
+		$stmt[] = "a.userID = $advisor_id ";
+	}
+
+	// Build statement dynamically based on size of array
+	$query = "";
+	for($i=0; $i<count($stmt); $i++) {
+		if(count($stmt) >= 1 && count($stmt) < 3) {
+			if($i == 0) {
+				$query .= $stmt[$i];
+			} else {
+				$query .= " WHERE ".$stmt[$i];
+			}
+		} elseif(count($stmt) > 1 && count($stmt) > 2) {
+			if($i == 0) {
+				$query .= $stmt[$i];
+			} elseif ($i == 1) {
+				$query .= " WHERE ".$stmt[$i];
+			} else {
+				$query .= " AND ".$stmt[$i];
+			}
+		}
+	}
+	echo '$query: '.$query.'<br>';
+	

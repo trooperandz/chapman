@@ -1,0 +1,39 @@
+ 
+ #rotitle    {float: left;} 
+		
+ #date	      {font-size: 10px; 
+			float: right;  
+			margin-top: 20px;  
+			text-align: right; } 
+			
+ #subtitle  {font-size: 12px;
+			color: #696969 !important; }			
+				   
+ #footer1    {clear: both;
+			font-size: 13px; 
+			text-align: center; 
+			margin-left: auto; 
+			margin-right: auto; 
+	        bottom: 0; 
+			page-break-after: always; }
+			
+ #footer2     {font-size: 13px; 
+			text-align: center; 
+			margin-left: auto; 
+		    margin-right: auto; 
+			position: bottom;
+			bottom: 0; }
+			
+ #trmain      {border-bottom: 1px solid #CCCCCC;
+			background-color: #DCDCDC !important;} 
+ 
+ td		     {text-align: right; 
+		    border-bottom: 1px solid #CCCCCC;
+		    border-right: 1px solid #CCCCCC;
+		    border-left: 1px solid #CCCCCC; }
+
+ #table       {margin-top: 7rem; }
+ 
+ #page1height {min-height: 85%;}
+ 
+ #page2height {min-height: 85%; }  

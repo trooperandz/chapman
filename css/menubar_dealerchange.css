@@ -1,0 +1,17 @@
+@media (min-width: 40.063em) {
+	.collapse_select {
+		margin-top: .42rem;
+		width: 130px;
+	}
+	.collapse_submit {
+		margin-left: 18px;
+	}
+}
+		
+.collapse_select {
+	height: 2rem;
+}
+		
+.collapse_submit {
+	height: 2rem !important;
+}

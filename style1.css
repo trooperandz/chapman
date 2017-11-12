@@ -1,0 +1,24 @@
+#menu { 
+	height: 20%; 
+	border: 2px solid black; 
+	} 
+#menu ul { 
+	text-align: center; 
+	} 
+#menu ul li {
+	display: inline; 
+	list-style-type: none; 
+	padding-right: 10px; 
+	}
+body { 
+	font-family: arial, helvetica;
+	} 
+#footer { 
+	text-align: center; 
+	margin-top: 150px; 
+	padding: 20px; 
+	height: 15%; 
+	border: 1px solid black; 
+	}
+
+

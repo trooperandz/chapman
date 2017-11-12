@@ -1,0 +1,317 @@
+*Dealer multiple select flow:
+
+1) Provide <select multiple> html
+2) Each <option> must contain the dealerID, dealercode, dealername (respectively)
+2) Grab each selected value via the following:
+	a) Create dealer_group: var dealer_group = [];
+	b) Run through each value using jQuery:
+		$('select#metrics_dealer_group :selected').each(function(i,selected){
+			dealer_group[i]= $(selected).val();
+			console.log('selected dealer: ' + dealer_group[i]);
+		});
+	c) 
+
+*Building and executing variable IN() sql statements with PDO
+	1) You cannot represent a string of multiple integers inside of IN() statement with one ?
+	2) Each integer must have its own ?
+	3) How to solve (this example given from class.Stats.inc.php, getServiceLevelStats() method:
+		// Prepare last query statement by making ? for IN operator dynamic, then concatenate to $query string
+		$sql[] = " AND a.serviceID IN(".rtrim(str_repeat('?,', count($svc_ids[$key])), ',').") ";
+		foreach($sql as $item) {
+			$query .= $item;
+		}
+		
+		// Add the remaining params for the IN operator based off of each array size
+		foreach($svc_ids[$key] as $id) {
+			$params[] = $id;
+		}	
+		
+*Building an array of months:
+	-This was put in the following static function inside of the DateTimeCalc class:
+		$date_array = DateTimeCalc::getMonthRanges(array('date1_sql'=>$date1_post, 'date2_sql'=>$date2_post));
+		
+	// Get date range.  These will either by entered by user, or generated from a query
+	$date1_post = $array['date1_sql_user'];
+	$date2_post = $array['date2_sql_user'];
+	//$date1_post = "2015-11-01";  // this is POST date #1
+	//$date2_post = "2016-03-11";  // this is POST date #2
+	
+	// Now use DateTime diff function to return number of months between two posted dates (result in format 'm')
+	$date1 = new DateTime($date1_post);
+	$date2 = new DateTime($date2_post);
+	$months = $date1->diff($date2)->m;
+	//echo 'months: '.$months;
+	
+	// Now run loop to construct succession of beginning and ending dates. Add 1 to $months, as always returns one less
+	$date = $date1_post;
+	for($m=0; $m<$months+1; $m++) {
+		if($m == 0) {
+			$date1 = $date1_post;
+		} else {
+			$date1 = $date; // This was est at the end of the loop
+		}
+		//echo '$date1: '.$date1.'<br>';
+		// Add $date1 to array
+		$date_array[] = $date1;
+		
+		// Now figure out second date. Check to make sure that result is less than 2nd POST date.  If not, set = 2nd POST date
+		$date_obj = new DateTime($date1);
+		$date2 = $date_obj->format("Y-m-t");
+		if($date2 > $date2_post) {
+			$date2 = $date2_post;
+		} 
+		
+		// Add $date2 to array
+		$date_array[] = $date2;
+		
+		// Now get the first of the next month
+		$date = strtotime(date("Y-m-d", strtotime($date2)) . " +1 day");
+		$date = date("Y-m-d", $date);
+	}
+	
+*Populating dynamic add-row input entry tables with <select> dropdown data (first JS session vars ever utilized)
+	-The problem:  When adding new users, all input data is in a table.  Each row has <input> and <select> items.
+	  			   How to populate the <select> dealer dropdowns when a new row is added?  1) Complete an ajax call
+	  			   every time to grab the html from the server or 2) Populate the html all on client side.
+	  			   Problem with server side: requires ajax call just to add a row. Could not get .append($("$user_req_row", returndata).html()) to work.
+				   Problem with client side: How to get and store dealer array to populate <option>'s list?
+				   
+	-Current solution:  Run a function to get the dealer array when JS is first initialized. Comes from php json_encode result.
+						The returndata is in a JSON string.  In order to build the <option> array, first turn the JSON string
+						into an array of objects using JSON.parse().  Create an empty string, run a loop for the size of the
+						objects array, and concatenate string data onto the empty string variable.  Save the resulting string as
+						a JS sessionStorage variable.  Use this varible in the final $("#add_req_row") handler for the dealer
+						<option>'s list.
+						
+	-Code: 
+		// Run the dealer listing retrieval function when JS is first initialized.  That way, will be available for later code
+		getDealerInfo();
+		
+		// Add rows to user setup table when 'Add Row' link is clicked
+		$('body').on('click', 'a#add_user_req_row', function() {
+			
+			// Retrieve js session <option> dealerOpts for dealer <select>
+			var dealerOpts = sessionStorage.getItem("dealerOpts");
+			$('table#user_request_table tbody').append('<tr><td style="width: 32px;"> <a class="fontello-cancel-circled-outline"></a> </td> <!-- the remove row placeholder --><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option value="">Select...</option>' + dealerOpts + '</select></td><!--<td><select><option value="">Select...</option></select></td>--><td><select><option value="">Select...</option><option value="1">Yes</option><option value="0">No</option></select></td></tr>');
+		});
+		
+		// Function to retrieve dealer listing for user setup requests.  Check for browser global (first ever js global!)
+		function getDealerInfo() {
+			var action = 'get_dealer_info_js';
+			$.ajax({
+				type: "POST",
+				url: processFile,
+				data: 'action=' + action,
+				success: function(returndata){
+					console.log('returndata: ' + returndata);
+					
+					/*
+					if (returndata == "error_login") {
+						alert('You are no longer logged in!');
+						return false;
+					}*/
+	
+					// Set returndata as js global.  Will contain an array of all dealer info
+					var dealerInfo = returndata;
+					sessionStorage.setItem("dealerInfo", dealerInfo);
+					
+					// Get dealerInfo session var to build dealer options list
+					var dealerInfo = sessionStorage.getItem("dealerInfo");
+					
+					// Convert JSON string (from php json_encode) to array of objects
+					var p = JSON.parse(dealerInfo);
+					
+					// Build the string of dealer <select> options and save as js session var for populating form options
+					var dealerOpts = "";
+					for(i=0; i<p.length; i++) {
+						dealerOpts += "<option value='" + p[i][0] + "#" + p[i][1] + "#" + p[i][2] + "'>" + p[i][2] + " (" + p[i][1] + ") </option>";
+					}
+					sessionStorage.setItem("dealerOpts", dealerOpts);
+				},
+				error: function(response){
+				 	alert(cxn_error);
+				 	return false;
+				}
+			});
+		}
+				                 
+*Submitting a from input via js (target the submit with an id)
+	-Handler: $('body').on('click', '#user_req_submit', function (event) {});	
+	
+*Serializing form data and handling errors:
+	-The problem: How to dynamically add rows to a form, and still test all input values
+	
+	-Solution:
+	// Submit user setup request form table
+	$('body').on('click', '#user_req_submit', function (event) {
+		event.preventDefault();
+		//console.log('clicked user setup request form submit');
+		
+		// Serialize the form data for use with $.ajax().  Will send to server for table INSERT
+		var formData = $(this).parents("form").serialize();
+		console.log('formData: ' + formData);
+		
+		// Validate all inputs. Establish error array.
+		var errors = [];
+		var serialize_array = $("form#user_req_form").serializeArray();
+		console.log('serialized form: ' , serialize_array);
+		
+		$.each(serialize_array, function(i, field) {
+			if (field.name == 'user_req_fname') {
+				if (!validName.test(field.value)) {
+					errors.push("*You entered an invalid first name!\n");
+				}
+			}
+			if (field.name == 'user_req_lname') {
+					
+				if (!validName.test(field.value)) {
+					errors.push("*You entered an invalid last name!\n");
+				}
+			}
+			if (field.name == 'user_req_uname') {
+				if (field.value == '') {
+					errors.push("*You left a username blank!\n");
+				}
+			}
+			if (field.name == 'user_req_email') {
+				if (!validEmail.test(field.value)) {
+					errors.push("*You entered an invalid email address!\n");
+				}
+			}
+			if (field.name == 'user_req_dealerID') {
+				if (field.value == ''){
+					errors.push("*You left a dealer field blank!\n");
+				}
+			}
+			if (field.name == 'user_req_admin') {
+				if (field.value == '') {
+					errors.push("*You left an admin selection blank!\n");
+				}
+			}
+		});
+		
+		if (errors.length > 0) {
+			var error_msg = "";
+			for (var i=0; i<errors.length; i++) {
+				error_msg += errors[i];
+			}
+			alert("Your input contains the following errors: \n\n" + error_msg + "\nPlease correct the errors and re-submit the form.");
+			return false;
+		}
+	});
+
+*Submitting a dynamic form (from table input format where you can add rows) and dealing with multiple table inserts:
+	-Problems: Using the jQuery .serialize() method is great for capturing all form inputs w/out a lot of work.  
+			   BUT when you have multiple rows with identical id's and names, you must add a '[]' to the end 
+			   of each id and name if you want to use .serialize().  This makes each item an array.
+			   Otherwise, it will just pick up only one row of the table.  I have read that adding brackets [] to the
+			   id's and names of html input elements is bad practice.  However, it has yet to cause me any issues.
+			   
+	// Submit user setup request form table
+	$('body').on('click', '#user_req_submit', function (event) {
+		event.preventDefault();
+		//console.log('clicked user setup request form submit');
+		
+		// Serialize the form data for use with $.ajax().  Will send to server for user_setup_request table
+		var formData = $(this).parents("form").serialize();
+		console.log('formData: ' + formData);
+		
+		// Validate all inputs. Establish error array.
+		var errors = [];
+		var serialize_array = $("form#user_req_form").serializeArray();
+		console.log('serialized form: ' , serialize_array);
+		
+		$.each(serialize_array, function(i, field) {
+			if (field.name == 'user_req_fname') {
+				if (!validName.test(field.value)) {
+					errors.push("*You entered an invalid first name!\n");
+				}
+			}
+			if (field.name == 'user_req_lname') {
+					
+				if (!validName.test(field.value)) {
+					errors.push("*You entered an invalid last name!\n");
+				}
+			}
+			if (field.name == 'user_req_uname') {
+				if (field.value == '') {
+					errors.push("*You left a username blank!\n");
+				}
+			}
+			if (field.name == 'user_req_email') {
+				if (!validEmail.test(field.value)) {
+					errors.push("*You entered an invalid email address!\n");
+				}
+			}
+			if (field.name == 'user_req_dealerID') {
+				if (field.value == ''){
+					errors.push("*You left a dealer field blank!\n");
+				}
+			}
+			if (field.name == 'user_req_admin') {
+				if (field.value == '') {
+					errors.push("*You left an admin selection blank!\n");
+				}
+			}
+		});
+		
+		if (errors.length > 0) {
+			var error_msg = "";
+			for (var i=0; i<errors.length; i++) {
+				error_msg += errors[i];
+			}
+			alert("Your input contains the following errors: \n\n" + error_msg + "\nPlease correct the errors and re-submit the form.");
+			return false;
+		}
+		
+		var action = 'process_user_setup_request';
+		
+		// Load the spinner to indicate processing
+		$('div.loader_div').html('<div class="spinner">Loading...</div>');
+
+		// The spinner is only removed once the ajax call is complete.
+		setTimeout(ajaxCall, timeDelay);
+		console.log('timeDelay: ' + timeDelay);
+
+		// Save the ajax call as a function to execute within the setTimeout() function
+		function ajaxCall() {
+		 	$.ajax({
+				type: "POST",
+				url: processFile,
+				data: formData + '&action=' + action,
+				success: function(returndata){
+					console.log('returndata: ' + returndata);
+
+					// Remove the loading div before the content is updated
+					$('.loader_div').empty();
+
+					if (returndata == "error_login") {
+						alert('You are no longer logged in!');
+						return false;
+					}
+
+					// Replace page content with returndata
+					$('div#page').html(returndata);
+					
+					// Re-initialize table functionality
+					/*
+					$("#user_setup_table").DataTable({
+					   paging: true,
+					   searching: true,
+					   order: []
+				    });*/
+				},
+				error: function(response){
+					// Remove the loading div before the content is updated
+					$('.loader_div').empty();
+
+				 	alert(cxn_error);
+				}
+			});
+		}
+	});
+
+*How to hash a password using php PASSWORD_BCRYPT
+	$password_1 = password_hash($password_1, PASSWORD_BCRYPT);
+	
+		

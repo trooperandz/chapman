@@ -1,0 +1,8 @@
+12/15/2014
+* All column charts need to have numbers at the top of the bars (whole numbers - no decimal)
+* Adjusting chart options needs to be at an admin level (hide the menu adjuster from non-admin user)
+*Change LOF Demand back to a barchart - and leave categories like original spreadsheet (no info about 'No LOF' at all)
+*Make sure that average labor and parts == sum of the first two averages
+*You can keep service demand a pie chart - specialists ok'd it
+*Mileage is just 0-15k (take out 5-15k) for all manufacturers
+*Make Longhorn chart x axis labels vertical

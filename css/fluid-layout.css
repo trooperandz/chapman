@@ -1,0 +1,10 @@
+.row {
+    max-width: 75rem;
+}
+
+@media only screen and (min-width: 40.063em) {
+    .column, .columns {
+        padding-left: 25px;
+        padding-right: 25px;
+    }
+}

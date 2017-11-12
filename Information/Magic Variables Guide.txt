@@ -1,0 +1,68 @@
+** File purpose:  List all magic variables categorized by report type
+
+-Dealer Reports:
+
+	*dealercodeswitch_process.php
+	$_SESSION['dealerID']   		// Dealer ID 
+	$_SESSION['dealercode'] 		// Dealer code
+	$_SESSION['repairordercount']	// Total repair order count 
+	
+	
+-Global Reports:
+
+	*multidealerglobal_process.php
+	$_SESSION['multidealer']		// Dealer ID list for user-entered dealers
+	$_SESSION['multidealercodes'] 	// Dealercodes for user-entered dealers
+	
+	*dealerregionglobal_process.php
+	$_SESSION['regionname']			// Name of region user selected
+	$_SESSION['totalregiondealers'] // Total dealer count in region
+	$_SESSION['regiondealerIDs']	// All dealer IDs in region
+	$_SESSION['dealerIDrocount']	// Count of dealers in region
+	
+	
+-Comparison Reports:
+	
+	// Dealer Comparisons
+	*multidealercomparison_process.php
+	$_SESSION['comparedealer1IDs']	 		// Dealer ID list for group 1 queries
+	$_SESSION['comparedealer1codes'] 		// Dealercodes for group 1 report titles
+	$_SESSION['comparedealer2IDs']			// Dealer ID list for group 2 queries		
+	$_SESSION['comparedealer2codes'] 		// Dealercodes for group 2 report titles
+	
+	// Global Comparisons
+	*multidealercomparisonglobal_process.php
+	$_SESSION['compareglobalIDs']			// Dealer ID list for user-entered dealer codes
+	$_SESSION['compareglobalcodes']			// Dealercodes for report titles
+	$_SESSION['totalactivedealers']			// Total count of dealers with records (active dealers)
+	$_SESSION['dealerarraysize']			// Total number of dealers entered by user
+	
+	// Dealers vs. Region comparisons
+	*dealerregioncompare_process
+	$_SESSION['comparedealerregion1codes']	// List of dealer codes user entered
+	$_SESSION['comparedealerregion1IDs']	// List of dealer IDs derived from user-entered dealer codes
+	$_SESSION['compareregionname1']			// Returns region name
+	$_SESSION['totalcompareregiondealers1'] // Total dealers in region
+	$_SESSION['comparisondealerIDrocount']	// Total dealers in region with ROs
+	$_SESSION['compareregiondealerIDs1']	// String of all dealers in the region
+	
+	// Region vs. Region comparisons
+	$_SESSION['compareregionIDs1']			// String of all dealers in first region selection
+	$_SESSION['compareregionIDs2']			// String of all dealers in second region selection
+	$_SESSION['regionname1']				// Returns region name of first selection
+	$_SESSION['regionname2']				// Returns region name of second selection
+	$_SESSION['totalregiondealers1']		// Returns total # dealers in first region selection
+	$_SESSION['totalregiondealers2']		// Returns total # dealers in second region selection
+	$_SESSION['regionrocount1']				// Returns total # dealers in first region selection with ROs
+	$_SESSION['regionrocount2']				// Returns total # dealers in second region selection with ROs
+	
+	// Region vs. Global comparisons
+	$_SESSION['regionvsglobalname'] 		// Magic variable for region selection name
+	$_SESSION['totalregionvsglobaldealers'] // Magic variable for total # dealers in region selection
+	$_SESSION['regionvsglobalIDs']			// Magic variable for string of dealerIDs
+	$_SESSION['regionvsglobalrocount']		// Magic variable for total dealers in region with ROs
+
+
+
+-Other
+	
