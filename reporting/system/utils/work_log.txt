@@ -1,0 +1,489 @@
+*Work log SOS
+
+	-Thurs 5/5/16
+		Completed login script revamp for updated system (to work with rebuilt user database table)
+		Completed logout script file for updated system
+		Completed interface redesign of main login page
+		Redefined SESSION['user'] variables for session data
+		
+	-Fri 5/6/16
+		Created new method in Query class: getUserQueryStmtParams() which processes dynamic user type queries
+		Added method getDealer() to DealerInfo class to integrate with login_process.php and replaced query in login with it
+		Replaced user query in login_process.php with method call to UserInfo class to adhere to DRY
+		Changed intro verbage and added user name to user setup request email confirmation emailUserSetupRequestConfirm fn
+		Converted UserInfo class to use PDO db method
+		Added getUserInfo() method to UserInfo class => processes all (dynamic) system user queries (login, manage users etc.)
+		Added [0] index to all user data contained in $_SESSION['user'] global
+		
+	-Mon 5/9/16
+		Built emailUserSetupRequestConfirm() function to send user setup request email notification to all sys admin users
+			and the current SESSION['user']['user_email']
+		Created the following methods in Admin class:
+			getUserRequests(): Retrieve all rows from user request table and save as array
+			processUserSetupApprovals(): Execute INSERT for user table and DELETE for user_setup_request table base on user selections
+		
+		Created the following methods in UserInfo class:
+			insertUser(): Inserts users into user table (whether from setup approvals or other setup submits)
+			deleteUserSetupRequest(): Deletes rows from user_setup_request table after successful insertUser() action
+			
+		Altered getPageHeading() method in Admin class by adding $array'link_msg' check to include dynamic link title
+		Altered getUserRequestTable() method in Admin class by adding 'user_approve' variable to $array param. Allows
+			table to be used for both user setup requests and setup approval (DRY).  Also build in display architecture
+			for display table with 'There are no requests pending approval' note (using <td colspan="7"> attribute
+		
+		Created submit handler in custom_enterrofoundation_welr.js file: '#user_req_approve_submit'
+			Contains JS instructions for submitting user setup request approvals via 'approve_user_setup_requests' action
+			
+		Added 'approve_user_setup_requests' $_POST['action'] to process_ajax.inc.php for processing user setup req approvals
+		
+		Added 'Approve User Setup' menu link to index.php for executing display of user setup approval interface
+			name="approve_user_setup"
+			
+		Added emailUserSetupApprovalConfirmAdmin() function to init.inc.php for emailing user setup approver approval confirm
+
+	-Tues 5/10/16
+		Relocated user setup email functions from init.inc.php file to Admin class to maintain encapsulation
+		Created emailUserSetupApprovalRequestor() method in Admin class for sending user setup approval confirms to original requestor
+		Changed login.php filename to index.php, to allow init.inc.php verifyUserLogin() function to execute when user SESSION has expired
+		Added verifyUserLogin() function to index.php
+		Added page reload instruction code to custom_enterrofoundation_welr.js for login check:
+			window.location.reload(true); 
+			User must now click 'Okay' to proceed to login page after viewing 'You are no longer logged in' message.
+			Necessary for AJAX functionality
+		Created 'Select All', 'Unselect All' <a> functionality for getPageHeading() method in Admin class (for user setup approvals):
+			Code contained in custom_enterrofoundation_welr.js:
+				// Check all checkboxes for user setup approvals when user clicks on 'Select All' (a id="select_all_user_requests")
+				$('body').on('click', '#select_all_user_requests', function (event) {
+					event.preventDefault();
+					console.log('select all user requests clicked!');
+					
+					// Set data-text var
+					var el = $(this);
+					
+					// Set prop based on data-text value
+					var property = (el.text() == el.data("text-swap")) ? false : true;
+					
+					// Run through each checkbox and make it checked or unchecked based on data-text text
+					$.each($('input[type="checkbox"]'), function() {
+						$(this).prop('checked', property);
+					});
+					
+					// Swap out 'Select All' with 'Unselect All'
+					el.text() == el.data("text-swap") ? el.text(el.data("text-original")) : el.text(el.data("text-swap"));
+					console.log('el.data(text-swap): ' + el.data("text_swap"));
+				});
+		Updated process_ajax.inc.php with instructions for user setup approval submittal
+		
+	-Weds 5/11/16
+		Created custom responsive table CSS instructions to allow tables to fit small device displays properly:
+			<div class="table-container">
+				<table></table>
+			</div>
+			.table-container {
+				width: 100%;
+				overflow-y: auto;
+				_overflow: auto;
+			}	
+		Added 'user_email' and 'user_active' params to Query::getUserQueryStmtParams() for user reset pass search
+		Created emailPassResetLink() method in Admin class for creating and sending user forgot password email + link
+		Created validateResetPassEmail() method in Admin class for validating user input for reset password.  Executes _resetPass() method
+		Created _resetPass() method in Admin class for running user UPDATE statement for new password update
+		
+	-Thurs 5/12/16
+		Transitioned main login page (index.php) markup to Admin class in getLoginForm() method
+			-getLoginForm() contains markup for: main login form, password reset request form, password reset entry form
+				and user action confirmation form
+			-the following params were build into getLoginForm() method which dictates form content:
+				array('welcome_msg','forgot_pass_link','enter_new_pass','get_login_form')
+		Edited process_ajax.inc.php to include non-session process instructions for login reset pass functionality
+		Added the following instructions to process_ajax.inc.php file for login and reset password actions:
+			-'get_login_form', 'forgot_pass_link', 'send_reset_link'
+		Added BASE_URI constant to init.inc.php config file: www.repairordersurvey.com/edumix/HTML/ for email pass reset link
+		Included $_GET instruction on index.php so that if user has clicked reset password email link, the reset pass form is displayed
+			Otherwise, the main login form is displayed
+		Edited reset_pass db table to include the following email reset password fields: email_id, user_name, pass_key, create_date
+		Tested emailPassResetLink() method in Admin class successfully -> email received with $_GET value
+	
+	-Fri 5/13/16
+		Added reset_active field to reset_pass db table so that full reset password request history may be recorded
+			while still maintaining unique email_id rows (otherwise could have duplicate email_id values)
+		Added 'a_id' param to getLoginForm() Admin method and to login instructions in process_ajax.inc.php to allow the <a> id to be dynamic
+			-Allows for index page to be refreshed after user attempts to reset password successfully, thus removing $_GET Url value
+		Created _updateResetPassActive() method in Admin class to execute UPDATE on reset_pass to set reset_active == 0
+			after user's password has successfully been reset
+		Set $_SESSION['hash'] var on index.php so that AJAX form post may use pass reset hash value
+			-Value is unset in process_ajax.inc.php
+		Added b.id to SELECT statement in validateResetPassData() Admin method to pass reset_pass id value to _updateResetPassActive() method
+			-Prevents PDO last id statement from having to be executed
+		Tested validateResetPassData(), _resetPass(), _updateResetPassActive() methods successfully -> 
+			-user_pass updated, reset_pass reset_active updated, email confirmation sent successfully
+		Created two constants in init.inc.php: INDEX_FULL, INDEX_SHORT & included in login code for page redirect
+	
+	-Sat 5/14/16
+		Added js validation to custom_enterrofoundation_welr.js for email and password inputs on password reset form
+		Created processUserLogin() process in Admin class by migrating process_login.php code to Admin class (reduced erroneous file)
+		Created processLoginForm() method in Admin class for processing user login.  Eliminated extra code in process_login.php
+		Created sticky form inputs for main login form in processLoginForm() method if user enters an error. Prevents user from losing entered data
+			-added <input> value(s) for possible user error display
+		Changed login $_SESSION['error'] array from numbered indexes to string indexes in processLoginForm() method 
+			for reference in getLoginForm() method
+			
+/****************************/
+	
+	-Monday 5/16/16
+		Added 'a_id' param instruction to 'get_login_form' action in process_ajax.inc.php
+		Created getUserTeams() and getUserTypes() static methods in UserInfo class for add user dropdowns
+		Created getAddUserTable() in Admin class for creating add user table for SOS admin and Dealer admin users
+		Created 'a#add_user_link' event handler in custom_enterrofoundation_welr.js for displaying add user form
+		Created 'add_new_users' process in process_ajax.inc.php for displaying add user form
+		Gave user tables in Admin class a 'user' class, and added styling instructions to enterro_welr.css for user tables
+		Added 'add_new_user_row' action to process_ajax.inc.php for dynamically adding user rows to add new user table
+		Revised $html concatenations in getAddUserTable() Admin method to contain: $html, $html2, $html3 (DRY adherence)
+		Added 'add_user_submit' handler to custom_enterrofoundation_welr.js for submitting add_new_user_form to server via AJAX
+		Created processAddNewUsers() method in Admin class for processing of add_new_users_form
+		
+	-Tuesday 5/17/16
+		Created check_username_dupe() function in custom_enterrofoundation_welr.js to check for duplicate usernames on add user forms
+		Redefined user form <input> id's by taking array brackets off ([]). Was interfering with check_username_dupe() function
+		Added json_decode instructions to processAddNewUsers() method in Admin class to comply with above function
+			-Also redefined foreach() loops in above file to process new json_decode() arrays
+		Created '#add_user_submit' handler in custom_enterrofoundation_welr.js file to process new user form submit
+		Added js 'push' instructions to '#add_user_submit' handler in custom_enterrofoundation_welr.js file to comply with changes above
+		Added check_username_dupe() function to custom_enterrofoundation_welr.js 'a#add_new_user_row' and 'a#add_user_link' event handlers
+		Created checkUsernameDupe() method in Admin class to execute username dupe check instructions, server_side
+		Created emailAddNewUsersConfirm() method in Admin class to send new user setup confirmation emails to current user
+		Added "N/A" <option value="0">N/A</option> option to Dealer <select> dropdown if user is sos_admin type
+		Created client-side verification in '#add_user_submit' custom_enterrofoundation_welr.js handler to check the following:
+			1) Make sure that dealer_id = 0 if type == 1 (SOS) or == 2(Manuf)
+			2) Make sure that Manuf and Dealer users are not assigned team 'All'
+			
+	-Wednesday 5/18/16
+		Created 'a#view_users' handler in custom_enterrofoundation_welr.js to process view user requests (action is set by 'name' attribute)
+		Added the following process actions to process_ajax.inc.php: 'view_dealer_users', 'view_sos_users', 'view_manuf_users'
+		Created getUserTable() method in Admin class for displaying all possible types of user tables
+			-One block of table markup is used for displaying all three user types
+		Note: Online reporting system version 1 did not allow all SOS users to see system users (only admin had rights).  
+			-Now they may see the users, but only admin may edit users
+		Added a.create_date, d.dealername, b.type_id and c.team_id query items to getUserInfo() method in UserInfo class so that user tables have access to these id types
+		Added above user id types to user SESSION array in processLoginForm() Admin method for program functionality
+			and $_SESSION['dealer_name'] to main program SESSION vars for dealer name display (don't want to always just show code)
+		Created #user_table DataTable initialization instruction in custom_enterrofoundation_welr.js -> executes after returndata finishes loading
+		Added $array['title_info'] to getPageHeading() method in Admin class: for display of blue heading menu index reference
+		Revamped all Admin class getPageHeading page titles with 'title_info' param
+		Replaced SESSION dealer code page titles with new $_SESSION['dealer_name'] SESSION var so user may view dealer name + dealer code for reference
+		Formatted height and width of 'Select' button in user tables to correctly fit table format (padding: 7px 14px !important)
+		Increased spacing of user table <th> to accommodate sort arrow and title spacing
+
+	-Thursday 5/19/16
+		Created $array['user_id'] param in getUserQueryStmtParams() method in Query class for editing selected user (from user table)
+		Created '#table_user_edit_select' handler in custom_enterrofoundation_welr.js for processing 'Select' user in user table
+		Incorporated 'edit_user' functionality into getAddUserTable() method in Admin class. Table build is based on these values
+		Added 'Save Changes' submit value to getAddUserTable() if $array['edit_user'] == true
+		Created 'table_user_edit_select' process in process_ajax.inc.php for generating edit user table complete with current user values
+		Incorporated $colspan var for <td> colspan attribute to build proper <tfoot> spacing based on type of user table being displayed
+		Added array('edit_user_val'=>$_POST['edit_user_val']) param to 'add_new_users' action on process_ajax.inc.php to dictate correct password handling
+		Included <input type="hidden" name="edit_user_val" id="edit_user_val" value="'.$edit_user_val.'" /> field in getAddUserTable() method to dictate password validation
+		Added logic to test var edit_user_val in custom_enterrofoundation_welr.js for instructions to validate user_pass or not
+		Created updateUser() method in UserInfo class to handle user edits in db
+		Added $pass_entered true/false logic to processAddNewUsers() method in Admin class for passing to updateUser() method in UserInfo class
+		Added $edit_user_val true/false logic to getAddUserTable() method for dictating updateUser() " user_pass = ? " statement inclusion
+		Added $edit_user_id true/false logic to getAddUserTable() method for passing to updateUser() method via processAddNewUsers() method
+			-Both of the above are initialized through <input type="hidden" /> form inputs in getAddUserTable() method
+		
+	-Friday 5/20/16
+		Reconfigured 'active' field value processing in processAddNewUsers() method to be compatible with both add and edit user functions
+		Added <input type="hidden" id="user_active" name="user_active" value="1" /> input field to getAddUserTable() method for default active value when adding new user
+		Included 'user_active' value in custom_enterrofoundation_welr.js '#add_user_submit' processing for passing to processAddNewUsers() method via process_ajax.inc.php
+		Rewrote 'success_msg' array element in process_ajax.inc.php 'add_new_users' action: 'success_msg'=>'*The users you submitted have been processed successfully
+		Included $post_user_active variable definition in processAddNewUsers() Admin method
+		Added foreach() loop in processAddNewUsers() Admin method for processing $post_user_active array element values
+		Added user_id param logic to $params[] (as last array elements) for db WHERE clause
+		Edited $edit_user_id var assignment: $edit_user_id  = ($_POST['edit_user_id'] > 0) ? $_POST['edit_user_id'] : false;
+		Edited password field processing logic based on edit_user_val in custom_enterrofoundation_welr.js so that correct value is passed to server:
+			if (field.name == 'user_pass') {
+				if (edit_user_val == 0) {
+					if (!validPass.test(field.value)) {
+						errors.push("*You entered an invalid password!\n");
+					} else { 
+						user_pass.push(field.value);
+					}
+				} else {
+					if(field.value == "") {
+						user_pass.push("false");
+					} else {
+						user_pass.push(field.value);
+					}
+				}
+			}
+		Edited password logic in processAddNewUsers() Admin method for correct password edit with pass, edit without pass, or add user processing:
+			// Add additional logic based on $edit_user_val
+			if (($edit_user_val && $post_user_pass[0] != "false") || !$edit_user_val) {
+				// Set $pass_entered value to true so that updateUser() method correctly includes " and user_pass = ? " statement
+				$pass_entered = true;
+				
+				$user_pass = array();
+				$i=0;
+				foreach($post_user_pass as $pass) {
+					// Use the below values to send along with confirmation email so that personnel has a record of actual passwords
+					$user_pass[$i] = $pass;
+					// Save the hashed pass
+					$params[$i]['pass_hash'] = password_hash($pass, PASSWORD_BCRYPT);
+					$i += 1;
+				}
+			} else {
+				$pass_entered = false;
+			}
+		Added $_SESSION['orig_edit_user_name'] to getAddUserTable() method for the validating of checkUserDupe() method	
+		Incorporated checkUserDupe() method logic in Admin class:
+			if (($edit_user_val	&& $edit_user_id != false && $user_uname[0] != $_SESSION['orig_edit_user_name']) || !$edit_user_val) {
+				// Note: $user_uname is an array
+				if($this->checkUsernameDupe(array('user_uname'->$user_uname)) {
+					return false;
+				}
+			}	
+		Completed edit user password reset tests:
+			-SOS admin user add new user -> SUCCESS
+			-SOS admin user edit user, no pass update -> SUCCESS
+			-SOS admin user edit user, with pass update -> SUCCESS
+			-Dlr admin user add new user -> SUCCESS
+			-Dlr admin user edit user, no pass update -> SUCCESS
+			-Dlr admin user edit user, with pass update -> SUCCESS
+		Completed checkUsernameDupe() method tests:
+			-SOS admin user edit user, with dupe username -> SUCCESS
+			-SOS admin user edit user, with original username -> SUCCESS
+			-Dlr admin user edit user, with dupe username -> SUCCESS
+			-Dlr admin user edit user, with original username -> SUCCESS
+		
+	Monday 5/23/16
+		Edited dealer table width instruction to ensure table spans entire page, including when menu collapse action occurs
+		  table.user {
+			width: 100% !important;
+		  }
+		Added $_SESSION['user']['user_fname'] echo to top-right menu bar for display of user's first name
+		Edited page title getPageHeading() DealerInfo method to emulate that of the Admin class:
+			-Contains the following array elements: 'page_title', 'title_info', 'a_id'=, 'link_msg'
+		Added getStateData() method to DealerInfo class for populating US state listing <select> dropdown
+		Added 'add_dealer_row' action array item to process_ajax.inc.php for adding rows to Add New Dealer form
+		Added 'a#add_dealer_row' event handler in custom_enterrofoundation_welr.js for adding dlr rows to Add Dealer table
+		Created <div id="dealer_tbody"> container for dealer <tbody> for add row processing
+		Added css styling instructions to enterro_welr.css for add_dealer_table: table#add_new_dealer
+		Added getDealerEdit() method to DealerInfo class for getting edit dealer information
+		Added submit buttons to 'View All Dealers' table so that admin users may edit any dealer
+		Added '#table_dealer_edit_select' submit handler to custom_enterrofoundation_welr.js for handling dealer edit action
+		Added 'table_dealer_edit_select' action to process_ajax.inc.php
+		Added hidden input field to add dealer form for passing on dealer_id in case of dealer edit:
+			<input type="hidden" name="edit_dealer_id" id="edit_dealer_id" value="'.$edit_dealer_id.'" />
+		Added hidden input field to add dealer form for passing dealer code to UPDATE processing to ensure code does not already exist
+		Created '#add_dealer_submit' submit handler in custom_enterrofoundation_welr.js for handling dealer form submit actions	
+		Created processAddNewDealers() method in DealerInfo class for processing of add/edit dealers (server-side)
+		
+	Tuesday 5/24/16
+		Created checkDealerDupe() method in DealerInfo class for checking dealer dupe codes when adding new dealers and editing existing dealers
+			-Executes getDealer() method
+		Created insertDealer() method in DealerInfo class for inserting new dealers into db
+		Created updateDealer() method in DealerInfo class for updating existing dealer in db
+		Deleted dealerfax field from dealer db table
+			-Also added crate_date to PDO param array: $params[$i]['create_date'] = date("Y-m-d H:i:s");
+		Edite updateDealer() method so that last $param array element is no longer 'create_date', and added 'edit_dealer_id' back to end of array:
+			$params   = array($array['params']);
+			$params   = array_pop($params);	
+		Created 'add_dealers' action in process_ajax.inc.php for adding of new dealers to db
+		Added <input type="hidden" name="edit_dealer_val" id="edit_dealer_val" value="'.$edit_dealer_val.'" /> to getAddDealerTable() method
+			for correct form processing based on boolean value
+		Added validCity to custom_enterrofoundation_welr.js for verifying dealer city names: /^[A-Za-z ]+$/
+		
+	Wednesday 5/25/16
+		Added create_date field to dealer db table for tracking of add dealer records
+		Changed 'Dealer Listing' left menu option item title to 'Manage Dealers'
+		Tested duplicate dealer code error reporting
+		Constructed correct array format using loops to ensure multiple dealer insert functionality:
+			$params = array();
+			$d = 0;
+			foreach($dealers as $dealer) {
+				for($i=0; $i<count($dealers[0]); $i++) {
+					$params[$d][0] = $dealer['code']	    ;
+					$params[$d][1] = $dealer['name']	    ;
+					$params[$d][2] = $dealer['address']    	;
+					$params[$d][3] = $dealer['city']	   	;
+					$params[$d][4] = $dealer['state']	    ;
+					$params[$d][5] = $dealer['zip']			;
+					$params[$d][6] = $dealer['phone']	    ;
+					$params[$d][7] = $dealer['district_id']	;
+					$params[$d][8] = $dealer['area_id']  	;
+					$params[$d][9] = $dealer['region_id']	;
+					$params[$d][10] = $dealer['create_date'];
+				}
+				// Increment $d for double-array index
+				$d += 1;
+			}
+			
+	Thursday 5/26/16
+		Edited and tested dealer dupe AJAX feedback message to be read through substring function:
+			-Prevents the need for blur() method
+			-else if (returndata.substring(0,10) == "error_dupe") {
+				alert(returndata.substring(10));
+				return false;
+			 }
+		Tested dupe dealer feedback mechanism to ensure that user is not allowed to enter a dealer code
+			that already exists.  Revamped warning message successful.
+		Added export links to main menu for exporting user and dealer listings
+		
+	Friday 5/27/16
+		Revised user duplicate error reporting similar to above dealer dupe methodology:
+			-Previous blur() method caused multiple firings of duplicate error message to occur for each username input
+			 field.  Unacceptable from user standpoint.
+			if (returndata.substring(0,13) == "username_dupe") {
+				alert(returndata.substring(13));
+				return false;
+			}
+		Removed check_username_dupe function from custom_enterrofoundation_welr.js 
+		Edited 'add_new_users' action in process_ajax.inc.php to comply with new error_dupe logic:
+			if($_POST['action'] == 'add_new_users') {
+			// Execute INSERT instruction; if successful, proceed with table form reload and success msg
+			if($result = $obj->$use_array['method1'](array('edit_user_val'=>$_POST['edit_user_val'], 'edit_user_id'=>$_POST['edit_user_id']))) {
+				if(substr($result, 0, 10) == "error_dupe") {
+					echo $result;
+					exit;
+				}
+				
+				if($_POST['edit_user_val'] == 1) {
+					// Configure username POST for success message
+					$user_name_success = json_decode($_POST['user_uname'], true);
+					$user_name_success = $user_name_success[0];
+					$array = array('page_title'=>'Manage Users - ', 'title_info'=>'Edit '.MANUF.' User', 'success_msg'=>'*User '.$user_name_success.' has been updated successfully!');
+					echo $obj->$use_array['method2']($array).
+					     $obj->$use_array['method4']($array);
+				} elseif (substr($result, 0, 10) != "error_dupe") {
+					$array = array('page_title'=>'Manage Users - ', 'title_info'=>'Add New Users', 'a_id'=>'add_new_user_row', 'link_msg'=>'Add Row', 'success_msg'=>'*The users you submitted have been processed successfully.  An email confirmation has been sent to: '.$_SESSION['user']['user_email']);
+					echo $obj->$use_array['method2']($array).
+						 $obj->$use_array['method3']($array).
+						 $obj->$use_array['method4']($array);
+				}
+			} else {
+				echo $result;
+			}
+		}
+		
+	Monday 5/30/16
+		HOLIDAY
+		
+	Tuesday 5/31/16
+		Incorporated export code into getUserTable() Admin method
+		Created export_users.php file for exporting user listings (dealer, SOS, Manuf)
+		Incorporated export code into getDealerListing() DealerInfo method
+		Changed order of method execution in process_ajax.inc.php for all getUserTable() and getDealerListing() instructions
+			to ensure that correct user or dealer count is displayed on system page and export
+		Created export_dealers.php file for exporting dealer listings	
+		Added $_SESSION['dealer_count'] to getPageHeading DealerInfo method
+		Added total dealer count to dealer export data
+		Added $_SESSION['user_count'] to getPageHeading Admin method
+		Added total user count to user export data
+		Edited getPageHeading() method in Admin class to include user count if $array['user_count'] == true
+	
+	Wednesday 6/1/16
+		Fixed footer display on index page (disappeared after AJAX page update) by adding </div> to page
+		Added target="_blank" to footer link and sosfirm.com page link
+		Added CSS instructions for .box and .box-body for more desirable table styling (card-style):
+			.box {
+				/* margin for white box container.  Original was 20px 0 */
+				margin: 20px 0px 30px !important;
+			}
+			.box, .box-body {
+				/* padding for white box.  original was 20px */
+				padding: 5px !important; 
+			}
+			.box-body {
+				/* this was used as an inline style on original page example.  Extracted to here to remove inline style */
+				display: block;
+			}	
+		Altered table markup to include divs for box card-style styling in all classes:
+			<div class="box">
+				<div class="box-body">
+				</div>
+			</div>
+		Updated user image from image to <i class="icon-user" style="color: maroon !important;"></i>
+		Updated Webpage title: <title>SOS Online Reporting</title>
+		Replaced id with class in getRoEntryTable() Welr method so that js handle may be used:
+			<a class="view_ros_link" name="view_ros_month" href="viewall_ros_welr.php">View Recent</a>
+		Replaced id with class in getPageHeading() Welr method so that js handle may be used:
+			<a class="enter_ros_link" style="color: green; font-size: 15px;"> &nbsp; Cancel</a>
+		Fixed user profile icon so that it is hidden on small columns:
+			@media(max-width: 768px) {
+				/* hide user icon on right top menu on small screens. Else will cause display size layering issue */
+				.admin-pic-text i {
+					display: none !important;
+				}
+			}
+		Replaced all menu action <a id=""> handlers in custom_enterrofoundation_welr.js with <a class="">
+			-js responsive menu was forcing id to go away when on small-screened devices. class is maintained, however
+		Fixed responsive table functionality on small screens on the following tables via the following css:
+			Tables:
+				-Main entry form service tables (also removed 'responsive' class from <table> markup
+				-
+			
+			CSS Instruction:
+			@media(max-width: 768px) {
+				/* Make sure that the scrollbar is near the very bottom of the table */
+				table.service_table {
+					margin-bottom: 0 !important;
+				}
+			}
+		Added CSS: white-space: nowrap; to service tables to ensure proper line display on small devices	
+		Removed "responsive" class from #enterrotable and replaced with <div class="table-container"> for 
+			correction display on small devices
+		
+	Thursday 6/2/16
+		Completed database backups for RO Survey and Online Reporting data
+		Corrected login form style: made inputs longer, made heading area span length == container width,
+			gave heading area a border-radius attribute
+		Added print stylesheet to main index page: <link rel="stylesheet" href="css/print_custom.css" />
+		Created CSS print style sheet: print_custom.css
+		Fixed responsiveness of dealer summary table - removed 'responsive' class, enabled "scrollX:" true
+		Added download icon and link to Surveys Summary page (getPageHeading() method)
+		Added download icon to RO Listing page (getPageHeading() method)
+		Fixed print page icon link href to prevent page reload after submitting request(href="#")
+		Added download and print icons to Metrics pages (getPageHeading() method)
+		Added download and print icons to Stats pages (getPageHeading() method)
+		Added download and print icons to RO pages (getPageHeading() method)
+		Added download and print icons to Dealer listing page (getPageHeading() method)
+		Note: getPageHeading() method revisions were required for all of the above icon additions
+		Added $array params to process_ajax.inc.php for metrics, stats, dlr summary, dealers,
+			and RO pages print and export icons: 'print-icon', 'export-icon'
+		
+		
+	Friday 6/3/16
+		
+			
+*Misc notes:
+
+	The problem:
+	-need to email user approvals to each original requestor, grouped by dealer code 
+		-original requestor information is inside of $users_approved array
+		-can keep it simple at first by sending separate emails for each new registration?
+		
+	User setup confirm email flow info:
+		1) When setups are requested, the requestor is sent a confirm, as well as all SOS admin users using
+		   the emailUserSetupRequestConfirm() method (for testing, you should get 3 emails. two adming(you) and one requestor(your). Successful test completed.
+		2) When setups are approved, the current admin who approved is sent confirm, and each user confirm is sent
+		   as an individual email to the original requestor using the following two methods:
+		   emailUserSetupApprovalConfirmAdmin()
+		   emailUserSetupApprovalConfirmRequestor()
+		   For testing, you should get 4 emails: one for admin approver(you), three more for each requestor email(you) containing one user each.  Test successful.
+		
+	Reset Password flow info:
+		1) User clicks 'Forgot Password?' link
+		2) Page displays email input field and user submits email (add field with js?) ->prevents another page from having to be built!
+		3) Process file is accessed, where emailPassResetLink() method executes and sends user an email with reset link in it
+		4) User clicks link and is brought to Reset Password screen, where he/she is prompted to enter their email address
+		   twice and to enter their new chosen password
+		5) After user enters data, the validateResetPassEmail() method is executed and password in user table is reset
+		6) System displays success message for user (along with original login screen??)
+		
+		The plan:
+			'forgot_pass_link' is sent as param
+			1) User clicks forgot password link
+			2) Inner form content is replaced (Including gray info msg): Display only one input (email input)
+			3) Submit button value changes to 'Send Link'
+			
+	Dealing with password field on user form when same markup is used for both adding and editing users
+		

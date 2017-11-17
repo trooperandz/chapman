@@ -1,0 +1,29 @@
+*Dealer multiple select flow:
+
+1) Provide <select multiple> html
+2) Each <option> must contain the dealerID, dealercode, dealername (respectively)
+2) Grab each selected value via the following:
+	a) Create dealer_group: var dealer_group = [];
+	b) Run through each value using jQuery:
+		$('select#metrics_dealer_group :selected').each(function(i,selected){
+			dealer_group[i]= $(selected).val();
+			console.log('selected dealer: ' + dealer_group[i]);
+		});
+3) 
+
+*Building and executing variable IN() sql statements with PDO
+	1) You cannot represent a string of multiple integers inside of IN() statement with one ?
+	2) Each integer must have its own ?
+	3) How to solve (this example given from class.Stats.inc.php, getServiceLevelStats() method:
+		// Prepare last query statement by making ? for IN operator dynamic, then concatenate to $query string
+		$sql[] = " AND a.serviceID IN(".rtrim(str_repeat('?,', count($svc_ids[$key])), ',').") ";
+		foreach($sql as $item) {
+			$query .= $item;
+		}
+		
+		// Add the remaining params for the IN operator based off of each array size
+		foreach($svc_ids[$key] as $id) {
+			$params[] = $id;
+		}	
+			
+			

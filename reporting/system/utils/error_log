@@ -1,0 +1,3 @@
+[10-Oct-2016 19:24:53 UTC] PHP Parse error:  syntax error, unexpected '}' in /home/sosfirm/public_html/edumix/HTML/system/class/class.Documents.inc.php on line 269
+[22-Aug-2017 21:54:27 UTC] PHP Warning:  unlink(/home/sosfirm/public_html/acura_revamp/reporting/system/user_docs/): Is a directory in /home/sosfirm/public_html/acura_revamp/reporting/system/class/class.Documents.inc.php on line 457
+[22-Aug-2017 22:00:03 UTC] PHP Warning:  unlink(/home/sosfirm/public_html/acura_revamp/reporting/system/user_docs/): Is a directory in /home/sosfirm/public_html/acura_revamp/reporting/system/class/class.Documents.inc.php on line 457
