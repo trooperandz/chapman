@@ -5,7 +5,7 @@
  *			 Define useful constants that may be used by multiple scripts
 			 Start the session
  * Methods:  N/A
- * Updates:	 
+ * Updates:
  *
 **/
 
@@ -24,11 +24,11 @@ $C = array();
 $C['DB_HOST'] = 'localhost';
 
 // The database username
-$C['DB_USER'] = 'sosfirm_acurates';
+$C['DB_USER'] = 'root';
 
 // The database password
-$C['DB_PASS'] = 'Trooper4#';
+$C['DB_PASS'] = 'Trooper2#';
 
 // The database name to work with
-$C['DB_NAME'] = 'sosfirm_acuratest';
+$C['DB_NAME'] = 'chapman';
 ?>
