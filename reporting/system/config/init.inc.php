@@ -109,7 +109,7 @@ function showErrorSuccessMsg() {
 
 // Define the auto-load function for loading of classes (prevents you from having to write a bunch of include statements)
 function __autoload($class) {
-	$filename = $_SERVER["DOCUMENT_ROOT"]."/acura_revamp/reporting/system/class/class." .$class. ".inc.php";
+	$filename = $_SERVER["DOCUMENT_ROOT"]."/reporting/system/class/class." .$class. ".inc.php";
 	if (file_exists($filename)) {
 		include_once($filename);
 	}
