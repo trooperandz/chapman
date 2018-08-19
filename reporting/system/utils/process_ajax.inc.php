@@ -30,29 +30,6 @@ $ContactUs = new ContactUs($dbo = null);
 
 /* This is for testing.  Try to put non-session AJAX processes here, before the verifyUserLoginAjax() code */
 if(isset($_POST['no_session'])) {
-
-  // $actions = array(
-  //   'get_login_form' => array(
-  //     'object'  => 'Admin',
-  //     'method1' => 'getLoginForm'
-  //   ),
-  //   'forgot_pass_link' => array(
-  //     'object'  => 'Admin',
-  //     'method1' => 'getLoginForm',
-  //     'method2' => 'getSuccessMsg'
-  //   ),
-  //   'send_reset_link' => array(
-  //     'object'  => 'Admin',
-  //     'method1' => 'emailPassResetLink',
-  //     'method2' => 'getLoginForm'
-  //   ),
-  //   'reset_user_pass' => array(
-  //     'object'  => 'Admin',
-  //     'method1' => 'validateResetPassData',
-  //     'method2' => 'getLoginForm'
-  //   )
-  // );
-
 	if (isset($_POST['action'])) {
 		if($_POST['action'] == 'forgot_pass_link') {
       $successArr = array(
@@ -145,386 +122,227 @@ if(isset($_POST['no_session'])) {
 exit;
 }
 
+function processRoEntry() {
+  // Prevent undefined index notices from service arrays
+  $svc_reg = (isset($_POST['svc_reg'])) ? $_POST['svc_reg'] : null;
+  $svc_add = (isset($_POST['svc_add'])) ? $_POST['svc_add'] : null;
+  $svc_dec = (isset($_POST['svc_dec'])) ? $_POST['svc_dec'] : null;
+  
+  $postArr = array(
+    'submit_name'=>$_POST['submit_name'], 
+    'ronumber'=>$_POST['ronumber'], 
+    'ro_date'=>$_POST['ro_date'],
+    'yearmodel'=>$_POST['yearmodel'], 
+    'mileage'=>$_POST['mileage'], 
+    'vehicle'=>$_POST['vehicle'], 
+    'labor'=>$_POST['labor'],
+    'parts'=>$_POST['parts'], 
+    'dealer_id'=>$_SESSION['dealer_id'], 
+    'comment'=>$_POST['comment'], 
+    'svc_reg'=>$svc_reg,
+    'svc_add'=>$svc_add, 
+    'svc_dec'=>$svc_dec, 
+    'svc_hidden'=>$_POST['svc_hidden'], 
+    'search_params'=>false
+  );
+  
+  echo $Welr->processRoEntry($postArr);
+}
+
+function renderRoEditForm() {
+  // Set $_SESSION['update_ronumber'] for future checking of ro update form. Do not forget to unset later
+  $_SESSION['update_ronumber'] = $_POST['ro_number'];
+
+  // Set $_SESSION['update_ro_id'] for updating of repairorder_welr record. Do not forget to unset later
+  $_SESSION['update_ro_id'] = $_POST['ro_id'];
+
+  $pageArr = array(
+    'page_title'=>'Update Order', 
+    'ro_count'=>true, 
+    'entry_form'=>true, 
+    'update_form'=>true,
+    'dealer_id'=>$_SESSION['dealer_id'], 
+    'dealer_code'=>$_SESSION['dealer_code'],
+    'print-icon'=>false, 
+    'export-icon'=>false
+  );
+
+  $paramArr = array(
+    'entry_form' => true, 
+    'date_range' => false, 
+    'search_params' => false
+  );
+
+  echo $Welr->getPageHeading($pageArr)
+    .$Welr->getRoEntryForm($update_form = true, $update_ro_id = $_POST['ro_id'], $search_params = false)
+    .$Welr->getRoEntryTable($paramArr);
+}
+
+function viewRosByMonth() {
+  // Set dates to current month to date
+  $_SESSION['ro_date_range1'] = date("Y-m-01");
+  $_SESSION['ro_date_range2'] = date("Y-m-d");
+
+  $date1 = date("m/d/y", strtotime(date("Y-m-01")));
+  $date2 = date("m/d/y", strtotime(date("Y-m-d")));
+
+  $pageArr = array('page_title'=>'Repair Order Listing ('.$date1.' - '.$date2.')', 'ro_count'=>true, 'entry_form'=>false,
+           'update_form'=>false, 'dealer_id'=>$_SESSION['dealer_id'], 'dealer_code'=>$_SESSION['dealer_code'],
+           'date_range'=>true, 'print-icon'=>true, 'export-icon'=>true);
+
+  $paramsArr = array(
+    'entry_form' => false, 
+    'date_range' => true, 
+    'search_params' => false
+  );
+
+  echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
+}
+
+function viewAllRos() {
+  $pageArr = array(
+    'page_title'=>'Repair Order Listing (All History)', 
+    'ro_count'=>true, 
+    'entry_form'=>false,
+    'update_form'=>false, 
+    'dealer_id'=>$_SESSION['dealer_id'], 
+    'dealer_code'=>$_SESSION['dealer_code'],
+    'date_range'=>false, 
+    'search_params'=>false, 
+    'print-icon'=>true, 
+    'export-icon'=>true
+  );
+
+  $paramsArr = array(
+    'entry_form' => false, 
+    'date_range' => false, 
+    'search_params' => false
+  );
+
+  echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
+}
+
 /* Make sure that user is logged in before any actions occur. If not, return 'error_login'
  * This is needed not only for security, but also for user feedback.  If a user clicks a link to
  * run a process, and they are not logged in, they need to be shown the 'error_login' message so
  * that they know they need to log in again.
 **/
 if(verifyUserLoginAjax()) {
-    // Create a lookup array for form actions
-  // $actions = array(
-  //       'ro_entry' => array(
-  //         'object' => 'Welr',
-  //         'method' => 'processRoEntry'
-  //       ),
-  //       'change_advisor' => array(
-  //         'object' => 'Welr',
-  //         'method' => 'processAdvisorSelection'
-  //       ),
-  //       'update_ro_form' => array(
-  //         'object' => 'Welr',
-  //         'method1' => 'getPageHeading',
-  //         'method2' => 'getRoEntryForm',
-  //         'method3' => 'getRoEntryTable'
-  //       ),
-  //       'view_ros_month' => array(
-  //         'object' => 'Welr',
-  //         'method1' => 'getPageHeading',
-  //         'method2' => 'getRoEntryTable'
-  //       ),
-  //       'view_ros_all' => array(
-  //         'object' => 'Welr',
-  //         'method1' => 'getPageHeading',
-  //         'method2' => 'getRoEntryTable'
-  //       ),
-  //       'enter_ros' => array(
-  //         'object'  => 'Welr',
-  //         'method1' => 'getPageHeading',
-  //         'method2' => 'getAdvisorDropdown',
-  //         'method3' => 'getRoEntryForm',
-  //         'method4' => 'getRoEntryTable'
-  //       ),
-  //       'ro_search' => array(
-  //         'object'  => 'Welr',
-  //         'method1' => 'getPageHeading',
-  //         'method2' => 'getRoEntryTable'
-  //       ),
-  //       'view_metrics_month' => array(
-  //         'object' => 'Metrics',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getMetricsTable',
-  //         'method3'=> 'getLaborPartsTable'
-  //       ),
-  //       'change_dealer_globals' => array(
-  //           'object' => 'Metrics',
-  //           'method1'=> 'getPageHeading',
-  //           'method2'=> 'getMetricsTable',
-  //           'method3'=> 'getLaborPartsTable'
-  //       ),
-  //       'view_metrics_all' => array(
-  //         'object' => 'Metrics',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getMetricsTable',
-  //         'method3'=> 'getLaborPartsTable'
-  //       ),
-  //       'metrics_dlr_comp' => array(
-  //         'object' => 'Metrics',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getMetricsDlrCompTable'
-  //       ),
-  //       'metrics_search' => array(
-  //         'object' => 'Metrics',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getMetricsTable',
-  //         'method3'=> 'getLaborPartsTable'
-  //       ),
-  //       'metrics_trend' => array(
-  //         'object' => 'Metrics',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getMetricsTrendTable'
-  //       ),
-  //       'view_stats_month' => array(
-  //         'object' => 'Stats',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getServiceLevelTable',
-  //         'method3'=> 'getLofTable',
-  //         'method4'=> 'getVehicleTable',
-  //         'method5'=> 'getYearModelTable',
-  //         'method6'=> 'getMileageTable',
-  //         'method7'=> 'getRoTrendTable',
-  //         //'method8'=> 'getRoEntryStatsTable'
-  //       ),
-  //       'view_stats_all' => array(
-  //         'object' => 'Stats',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getServiceLevelTable',
-  //         'method3'=> 'getLofTable',
-  //         'method4'=> 'getVehicleTable',
-  //         'method5'=> 'getYearModelTable',
-  //         'method6'=> 'getMileageTable',
-  //         'method7'=> 'getRoTrendTable',
-  //         //'method8'=> 'getRoEntryStatsTable'
-  //       ),
-  //       'stats_search' => array(
-  //         'object' => 'Stats',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getServiceLevelTable',
-  //         'method3'=> 'getLofTable',
-  //         'method4'=> 'getVehicleTable',
-  //         'method5'=> 'getYearModelTable',
-  //         'method6'=> 'getMileageTable',
-  //         'method7'=> 'getRoTrendTable',
-  //         //'method8'=> 'getRoEntryStatsTable'
-  //       ),
-  //       'dealer_summary' => array(
-  //         'object' => 'SurveysSummary',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getDealerSummaryTable'
-  //       ),
-  //       'dealer_summary_select' => array(
-  //         'object' => 'Metrics',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getMetricsTable',
-  //         'method3'=> 'getLaborPartsTable'
-  //       ),
-  //       'view_dealer_list_all' => array(
-  //         'object' => 'DealerInfo',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getDealerListingTable'
-  //       ),
-  //       'get_dealer_add_form' => array(
-  //         'object' => 'DealerInfo',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getAddDealerTable'
-  //       ),
-  //       'add_dealer_row' => array(
-  //         'object' => 'DealerInfo',
-  //         'method1'=> 'getAddDealerTable'
-  //       ),
-  //       'add_dealers' => array(
-  //         'object' => 'DealerInfo',
-  //         'method1'=> 'processAddNewDealers',
-  //         'method2'=> 'getPageHeading',
-  //         'method3'=> 'getAddDealerTable',
-  //         'method4'=> 'getSuccessMsg'
-  //       ),
-  //       'get_user_request_form' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getUserRequestTable'
-  //       ),
-  //       'add_user_req_row' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'addUserRequestRow'
-  //       ),
-  //       'get_dealer_info_js' => array(
-  //         'object' => 'DealerInfo',
-  //         'method1'=> 'getDealerListing'
-  //       ),
-  //       'process_user_setup_request' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'processUserSetupRequest',
-  //         'method2'=> 'getPageHeading',
-  //         'method3'=> 'getUserRequestTable',
-  //         'method4'=> 'getSuccessMsg'
-  //       ),
-  //       'view_user_setup_requests' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getUserRequestTable'
-  //       ),
-  //       'approve_user_setup_requests' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'processUserSetupApprovals',
-  //         'method2'=> 'getPageHeading',
-  //         'method3'=> 'getUserRequestTable',
-  //         'method4'=> 'getSuccessMsg'
-  //       ),
-  //       'add_new_user_table' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getAddUserTable'
-  //       ),
-  //       'add_new_user_row' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'getAddUserTable'
-  //       ),
-  //       'add_new_users' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'processAddNewUsers',
-  //         'method2'=> 'getPageHeading',
-  //         'method3'=> 'getAddUserTable',
-  //         'method4'=> 'getSuccessMsg'
-  //       ),
-  //       'check_username_dupe' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'checkUsernameDupe'
-  //       ),
-  //       'view_dealer_users' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getUserTable'
-  //       ),
-  //       'view_sos_users' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getUserTable'
-  //       ),
-  //       'view_manuf_users' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getUserTable'
-  //       ),
-  //       'table_user_edit_select' => array(
-  //         'object' => 'Admin',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getAddUserTable'
-  //       ),
-  //       'table_dealer_edit_select' => array(
-  //         'object' => 'DealerInfo',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getAddDealerTable'
-  //       ),
-  //       'add_doc_link' => array(
-  //         'object' => 'Documents',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getFileUploadForm'
-  //       ),
-  //       'file_submit' => array(
-  //         'object' => 'Documents',
-  //         'method1'=> 'processFileUpload',
-  //         'method2'=> 'getPageHeading',
-  //         'method3'=> 'getFileUploadForm',
-  //         'method4'=> 'getSuccessMsg'
-  //       ),
-  //       'view_doc_link' => array(
-  //         'object' => 'Documents',
-  //         'method1'=> 'getDocTable',
-  //         'method2'=> 'getPageHeading'
-  //       ),
-  //       'view_doc_table' => array(
-  //         'object' => 'Documents',
-  //         'method1'=> 'getDocTable',
-  //         'method2'=> 'getPageHeading'
-  //       ),
-  //       'table_doc_select' => array(
-  //         'object' => 'Documents',
-  //         'method1'=> 'viewFile'
-  //       ),
-  //       'delete_doc' => array(
-  //         'object' => 'Documents',
-  //         'method1'=> 'deleteDoc',
-  //         'method2'=> 'getDocTable',
-  //         'method3'=> 'getPageHeading',
-  //         'method4'=> 'getSuccessMsg'
-  //       ),
-  //       'edit_doc_form' => array(
-  //         'object' => 'Documents',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getFileUploadForm'
-  //       ),
-  //       'file_update_submit' => array(
-  //         'object' => 'Documents',
-  //         'method1'=> 'updateDoc',
-  //         'method2'=> 'getDocTable',
-  //         'method3'=> 'getPageHeading',
-  //         'method4'=> 'getSuccessMsg'
-  //       ),
-  //       'contact_us_link' => array(
-  //         'object' => 'ContactUs',
-  //         'method1'=> 'getPageHeading',
-  //         'method2'=> 'getContactForm'
-  //       ),
-  //       'contact_us_submit' => array(
-  //         'object' => 'ContactUs',
-  //         'method1'=> 'processContactForm',
-  //         'method2'=> 'getPageHeading',
-  //         'method3'=> 'getSuccessMsg',
-  //         'method4'=> 'getContactForm'
-  //       )
-  //     );
-
 	// Make sure the requested action exists in the lookup array
 	if (isset($_POST['action'])) {
-		if($_POST['action'] == 'ro_entry') {
-			// Prevent undefined index notices from service arrays
-			$svc_reg = (isset($_POST['svc_reg'])) ? $_POST['svc_reg'] : null;
-			$svc_add = (isset($_POST['svc_add'])) ? $_POST['svc_add'] : null;
-			$svc_dec = (isset($_POST['svc_dec'])) ? $_POST['svc_dec'] : null;
+    switch($_POST['action']) {
+      case 'ro_entry':
+        processRoEntry();
+        break;
+      case 'update_ro_form':
+        renderRoEditForm();
+        break;
+      case 'view_ros_month':
+        viewRosByMonth();
+        break;
+      case 'view_ros_all':
+        viewAllRos();
+        break;
+    }
+		// if($_POST['action'] == 'ro_entry') {
+		// 	// Prevent undefined index notices from service arrays
+		// 	$svc_reg = (isset($_POST['svc_reg'])) ? $_POST['svc_reg'] : null;
+		// 	$svc_add = (isset($_POST['svc_add'])) ? $_POST['svc_add'] : null;
+		// 	$svc_dec = (isset($_POST['svc_dec'])) ? $_POST['svc_dec'] : null;
 
-			$postArr = array(
-        'submit_name'=>$_POST['submit_name'], 
-        'ronumber'=>$_POST['ronumber'], 
-        'ro_date'=>$_POST['ro_date'],
-				'yearmodel'=>$_POST['yearmodel'], 
-        'mileage'=>$_POST['mileage'], 
-        'vehicle'=>$_POST['vehicle'], 
-        'labor'=>$_POST['labor'],
-				'parts'=>$_POST['parts'], 
-        'dealer_id'=>$_SESSION['dealer_id'], 
-        'comment'=>$_POST['comment'], 
-        'svc_reg'=>$svc_reg,
-				'svc_add'=>$svc_add, 
-        'svc_dec'=>$svc_dec, 
-        'svc_hidden'=>$_POST['svc_hidden'], 
-        'search_params'=>false
-      );
+		// 	$postArr = array(
+  //       'submit_name'=>$_POST['submit_name'], 
+  //       'ronumber'=>$_POST['ronumber'], 
+  //       'ro_date'=>$_POST['ro_date'],
+		// 		'yearmodel'=>$_POST['yearmodel'], 
+  //       'mileage'=>$_POST['mileage'], 
+  //       'vehicle'=>$_POST['vehicle'], 
+  //       'labor'=>$_POST['labor'],
+		// 		'parts'=>$_POST['parts'], 
+  //       'dealer_id'=>$_SESSION['dealer_id'], 
+  //       'comment'=>$_POST['comment'], 
+  //       'svc_reg'=>$svc_reg,
+		// 		'svc_add'=>$svc_add, 
+  //       'svc_dec'=>$svc_dec, 
+  //       'svc_hidden'=>$_POST['svc_hidden'], 
+  //       'search_params'=>false
+  //     );
 
-			echo $Welr->processRoEntry($postArr);
-		}
+		// 	echo $Welr->processRoEntry($postArr);
+		// }
 
-		if ($_POST['action'] == 'update_ro_form') {
-			// Set $_SESSION['update_ronumber'] for future checking of ro update form. Do not forget to unset later
-			$_SESSION['update_ronumber'] = $_POST['ro_number'];
+		// if ($_POST['action'] == 'update_ro_form') {
+		// 	// Set $_SESSION['update_ronumber'] for future checking of ro update form. Do not forget to unset later
+		// 	$_SESSION['update_ronumber'] = $_POST['ro_number'];
 
-			// Set $_SESSION['update_ro_id'] for updating of repairorder_welr record. Do not forget to unset later
-			$_SESSION['update_ro_id'] = $_POST['ro_id'];
+		// 	// Set $_SESSION['update_ro_id'] for updating of repairorder_welr record. Do not forget to unset later
+		// 	$_SESSION['update_ro_id'] = $_POST['ro_id'];
 
-			$pageArr = array(
-        'page_title'=>'Update Order', 
-        'ro_count'=>true, 
-        'entry_form'=>true, 
-        'update_form'=>true,
-				'dealer_id'=>$_SESSION['dealer_id'], 
-        'dealer_code'=>$_SESSION['dealer_code'],
-				'print-icon'=>false, 
-        'export-icon'=>false
-      );
+		// 	$pageArr = array(
+  //       'page_title'=>'Update Order', 
+  //       'ro_count'=>true, 
+  //       'entry_form'=>true, 
+  //       'update_form'=>true,
+		// 		'dealer_id'=>$_SESSION['dealer_id'], 
+  //       'dealer_code'=>$_SESSION['dealer_code'],
+		// 		'print-icon'=>false, 
+  //       'export-icon'=>false
+  //     );
 
-      $paramArr = array(
-        'entry_form' => true, 
-        'date_range' => false, 
-        'search_params' => false
-      );
+  //     $paramArr = array(
+  //       'entry_form' => true, 
+  //       'date_range' => false, 
+  //       'search_params' => false
+  //     );
 
-			echo $Welr->getPageHeading($pageArr)
-        .$Welr->getRoEntryForm($update_form = true, $update_ro_id = $_POST['ro_id'], $search_params = false)
-        .$Welr->getRoEntryTable($paramArr);
-		}
+		// 	echo $Welr->getPageHeading($pageArr)
+  //       .$Welr->getRoEntryForm($update_form = true, $update_ro_id = $_POST['ro_id'], $search_params = false)
+  //       .$Welr->getRoEntryTable($paramArr);
+		// }
 
-		if ($_POST['action'] == 'view_ros_month') {
-			// Set dates to current month to date
-			$_SESSION['ro_date_range1'] = date("Y-m-01");
-			$_SESSION['ro_date_range2'] = date("Y-m-d");
+		// if ($_POST['action'] == 'view_ros_month') {
+		// 	// Set dates to current month to date
+		// 	$_SESSION['ro_date_range1'] = date("Y-m-01");
+		// 	$_SESSION['ro_date_range2'] = date("Y-m-d");
 
-			$date1 = date("m/d/y", strtotime(date("Y-m-01")));
-			$date2 = date("m/d/y", strtotime(date("Y-m-d")));
+		// 	$date1 = date("m/d/y", strtotime(date("Y-m-01")));
+		// 	$date2 = date("m/d/y", strtotime(date("Y-m-d")));
 
-			$pageArr = array('page_title'=>'Repair Order Listing ('.$date1.' - '.$date2.')', 'ro_count'=>true, 'entry_form'=>false,
-						   'update_form'=>false, 'dealer_id'=>$_SESSION['dealer_id'], 'dealer_code'=>$_SESSION['dealer_code'],
-						   'date_range'=>true, 'print-icon'=>true, 'export-icon'=>true);
+		// 	$pageArr = array('page_title'=>'Repair Order Listing ('.$date1.' - '.$date2.')', 'ro_count'=>true, 'entry_form'=>false,
+		// 				   'update_form'=>false, 'dealer_id'=>$_SESSION['dealer_id'], 'dealer_code'=>$_SESSION['dealer_code'],
+		// 				   'date_range'=>true, 'print-icon'=>true, 'export-icon'=>true);
 
-      $paramsArr = array(
-        'entry_form' => false, 
-        'date_range' => true, 
-        'search_params' => false
-      );
+  //     $paramsArr = array(
+  //       'entry_form' => false, 
+  //       'date_range' => true, 
+  //       'search_params' => false
+  //     );
 
-			echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
-		}
+		// 	echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
+		// }
 
-		if ($_POST['action'] == 'view_ros_all') {
-			$pageArr = array(
-        'page_title'=>'Repair Order Listing (All History)', 
-        'ro_count'=>true, 
-        'entry_form'=>false,
-				'update_form'=>false, 
-        'dealer_id'=>$_SESSION['dealer_id'], 
-        'dealer_code'=>$_SESSION['dealer_code'],
-				'date_range'=>false, 
-        'search_params'=>false, 
-        'print-icon'=>true, 
-        'export-icon'=>true
-      );
+		// if ($_POST['action'] == 'view_ros_all') {
+		// 	$pageArr = array(
+  //       'page_title'=>'Repair Order Listing (All History)', 
+  //       'ro_count'=>true, 
+  //       'entry_form'=>false,
+		// 		'update_form'=>false, 
+  //       'dealer_id'=>$_SESSION['dealer_id'], 
+  //       'dealer_code'=>$_SESSION['dealer_code'],
+		// 		'date_range'=>false, 
+  //       'search_params'=>false, 
+  //       'print-icon'=>true, 
+  //       'export-icon'=>true
+  //     );
 
-      $paramsArr = array(
-        'entry_form' => false, 
-        'date_range' => false, 
-        'search_params' => false
-      );
+  //     $paramsArr = array(
+  //       'entry_form' => false, 
+  //       'date_range' => false, 
+  //       'search_params' => false
+  //     );
 
-			echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
-		}
+		// 	echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
+		// }
 
 		if($_POST['action'] == 'enter_ros') {
 			$pageArr = array(
