@@ -568,7 +568,7 @@ if(verifyUserLoginAjax()) {
 			  'district_id'=>false, 
         'area_id'=>false, 
         'region_id'=>false, 
-        'search_feedback'=> 'Date Range: '.$date1.' through '.$ date2,
+        'search_feedback'=> 'Date Range: '.$date1.' through '.$date2,
 			  'print-icon'=>true, 
         'export-icon'=>true, 
         'a_id'=>false
