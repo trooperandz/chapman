@@ -1021,14 +1021,12 @@ if(verifyUserLoginAjax()) {
         'link_msg'=>null
       );
 
-      $paramsArr = array('edit_user'=>true, 'user_id'=>$_POST['user_id'])
+      $paramsArr = array('edit_user'=>true, 'user_id'=>$_POST['user_id']);
 
 			echo $Admin->getPageHeading($pageArr).$Admin->getAddUserTable($paramsArr);
 		}
-              'object' => 'DealerInfo',
-          'method1'=> 'getPageHeading',
-          'method2'=> 'getAddDealerTable'
-		if($_POST['action'] == 'table_dealer_edit_select') {
+
+		if ($_POST['action'] == 'table_dealer_edit_select') {
       $pageArr = array(
         'page_title'=>'Manage Dealers - ', 
         'title_info'=>'Edit '.MANUF.' Dealer', 
