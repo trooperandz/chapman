@@ -716,7 +716,7 @@ if(verifyUserLoginAjax()) {
       );
 
 			// Run getDealerListingTable() method first so that $_SESSION['dealer_count'] may be used in title etc.
-      $dealerTable = $DealerInfo->getDealerListingTable($array)
+      $dealerTable = $DealerInfo->getDealerListingTable($array);
 
 			echo $DealerInfo->getPageHeading($array).$dealerTable;
 		}
