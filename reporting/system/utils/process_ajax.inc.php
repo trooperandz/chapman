@@ -139,12 +139,12 @@ if(verifyUserLoginAjax()) {
 					'method2'=> 'getMetricsTable',
 					'method3'=> 'getLaborPartsTable'
 				),
-                'change_dealer_globals' => array(
-                    'object' => 'Metrics',
-                    'method1'=> 'getPageHeading',
-                    'method2'=> 'getMetricsTable',
-                    'method3'=> 'getLaborPartsTable'
-                ),
+        'change_dealer_globals' => array(
+            'object' => 'Metrics',
+            'method1'=> 'getPageHeading',
+            'method2'=> 'getMetricsTable',
+            'method3'=> 'getLaborPartsTable'
+        ),
 				'view_metrics_all' => array(
 					'object' => 'Metrics',
 					'method1'=> 'getPageHeading',
@@ -922,7 +922,7 @@ if(verifyUserLoginAjax()) {
 
 		if($_POST['action'] == 'view_sos_users') {
 			// Run table generation code first so that dealer count SESSION var is available to getPageHeading() method
-			$user_table = $obj->$use_array['method2'](array('table_requested'=>'sos','requested_by'=>$_SESSION['user']['user_type_id'], 'request_admin_val'=>$_SESSION['user']['user_admin']));
+			$user_table = (string)$obj->$use_array['method2'](array('table_requested'=>'sos','requested_by'=>$_SESSION['user']['user_type_id'], 'request_admin_val'=>$_SESSION['user']['user_admin']));
 			echo $obj->$use_array['method1'](array('page_title'=>'Manage Users - ', 'title_info'=>MANUF.' SOS Users',  'link_msg'=>'Add New User', 'a_id'=>'add_user_link', 'print-icon'=>true, 'export-icon'=>true, 'user_count'=>true)).
 				 $user_table;
 		}
