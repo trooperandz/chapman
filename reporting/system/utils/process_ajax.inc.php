@@ -760,13 +760,13 @@ if(verifyUserLoginAjax()) {
 		}
 
 		if($_POST['action'] == 'view_dealer_list_all') {
+      $DealerInfo = new DealerInfo();
 			$array = array('page_title'=>'Manage Dealers - ', 'title_info'=>'All '.MANUF.' Dealers',
 						   'a_id'=>'add_dealer_link', 'link_msg'=>'Add New Dealer', 'dealer_count'=>true,
 						   'print-icon'=>true, 'export-icon'=>true);
 			// Run getDealerListingTable() method first so that $_SESSION['dealer_count'] may be used in title etc.
-			$dealer_table = $obj->$use_array['method2']($array);
-			echo $obj->$use_array['method1']($array).
-				 $dealer_table;
+			// $dealer_table = $DealerInfo->getDealerListingTable($array);
+			echo $DealerInfo->getPageHeading($array).$DealerInfo->getDealerListingTable($array);
 		}
 
 		if($_POST['action'] == 'get_dealer_add_form') {
