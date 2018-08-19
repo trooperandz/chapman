@@ -30,6 +30,29 @@ $ContactUs = new ContactUs($dbo = null);
 
 /* This is for testing.  Try to put non-session AJAX processes here, before the verifyUserLoginAjax() code */
 if(isset($_POST['no_session'])) {
+
+  $actions = array(
+    'get_login_form' => array(
+      'object'  => 'Admin',
+      'method1' => 'getLoginForm'
+    ),
+    'forgot_pass_link' => array(
+      'object'  => 'Admin',
+      'method1' => 'getLoginForm',
+      'method2' => 'getSuccessMsg'
+    ),
+    'send_reset_link' => array(
+      'object'  => 'Admin',
+      'method1' => 'emailPassResetLink',
+      'method2' => 'getLoginForm'
+    ),
+    'reset_user_pass' => array(
+      'object'  => 'Admin',
+      'method1' => 'validateResetPassData',
+      'method2' => 'getLoginForm'
+    )
+  );
+
 	if (isset($actions[$_POST['action']])) {
 		if($_POST['action'] == 'forgot_pass_link') {
       $successArr = array(
@@ -128,6 +151,279 @@ exit;
  * that they know they need to log in again.
 **/
 if(verifyUserLoginAjax()) {
+    // Create a lookup array for form actions
+  $actions = array(
+        'ro_entry' => array(
+          'object' => 'Welr',
+          'method' => 'processRoEntry'
+        ),
+        'change_advisor' => array(
+          'object' => 'Welr',
+          'method' => 'processAdvisorSelection'
+        ),
+        'update_ro_form' => array(
+          'object' => 'Welr',
+          'method1' => 'getPageHeading',
+          'method2' => 'getRoEntryForm',
+          'method3' => 'getRoEntryTable'
+        ),
+        'view_ros_month' => array(
+          'object' => 'Welr',
+          'method1' => 'getPageHeading',
+          'method2' => 'getRoEntryTable'
+        ),
+        'view_ros_all' => array(
+          'object' => 'Welr',
+          'method1' => 'getPageHeading',
+          'method2' => 'getRoEntryTable'
+        ),
+        'enter_ros' => array(
+          'object'  => 'Welr',
+          'method1' => 'getPageHeading',
+          'method2' => 'getAdvisorDropdown',
+          'method3' => 'getRoEntryForm',
+          'method4' => 'getRoEntryTable'
+        ),
+        'ro_search' => array(
+          'object'  => 'Welr',
+          'method1' => 'getPageHeading',
+          'method2' => 'getRoEntryTable'
+        ),
+        'view_metrics_month' => array(
+          'object' => 'Metrics',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getMetricsTable',
+          'method3'=> 'getLaborPartsTable'
+        ),
+        'change_dealer_globals' => array(
+            'object' => 'Metrics',
+            'method1'=> 'getPageHeading',
+            'method2'=> 'getMetricsTable',
+            'method3'=> 'getLaborPartsTable'
+        ),
+        'view_metrics_all' => array(
+          'object' => 'Metrics',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getMetricsTable',
+          'method3'=> 'getLaborPartsTable'
+        ),
+        'metrics_dlr_comp' => array(
+          'object' => 'Metrics',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getMetricsDlrCompTable'
+        ),
+        'metrics_search' => array(
+          'object' => 'Metrics',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getMetricsTable',
+          'method3'=> 'getLaborPartsTable'
+        ),
+        'metrics_trend' => array(
+          'object' => 'Metrics',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getMetricsTrendTable'
+        ),
+        'view_stats_month' => array(
+          'object' => 'Stats',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getServiceLevelTable',
+          'method3'=> 'getLofTable',
+          'method4'=> 'getVehicleTable',
+          'method5'=> 'getYearModelTable',
+          'method6'=> 'getMileageTable',
+          'method7'=> 'getRoTrendTable',
+          //'method8'=> 'getRoEntryStatsTable'
+        ),
+        'view_stats_all' => array(
+          'object' => 'Stats',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getServiceLevelTable',
+          'method3'=> 'getLofTable',
+          'method4'=> 'getVehicleTable',
+          'method5'=> 'getYearModelTable',
+          'method6'=> 'getMileageTable',
+          'method7'=> 'getRoTrendTable',
+          //'method8'=> 'getRoEntryStatsTable'
+        ),
+        'stats_search' => array(
+          'object' => 'Stats',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getServiceLevelTable',
+          'method3'=> 'getLofTable',
+          'method4'=> 'getVehicleTable',
+          'method5'=> 'getYearModelTable',
+          'method6'=> 'getMileageTable',
+          'method7'=> 'getRoTrendTable',
+          //'method8'=> 'getRoEntryStatsTable'
+        ),
+        'dealer_summary' => array(
+          'object' => 'SurveysSummary',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getDealerSummaryTable'
+        ),
+        'dealer_summary_select' => array(
+          'object' => 'Metrics',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getMetricsTable',
+          'method3'=> 'getLaborPartsTable'
+        ),
+        'view_dealer_list_all' => array(
+          'object' => 'DealerInfo',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getDealerListingTable'
+        ),
+        'get_dealer_add_form' => array(
+          'object' => 'DealerInfo',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getAddDealerTable'
+        ),
+        'add_dealer_row' => array(
+          'object' => 'DealerInfo',
+          'method1'=> 'getAddDealerTable'
+        ),
+        'add_dealers' => array(
+          'object' => 'DealerInfo',
+          'method1'=> 'processAddNewDealers',
+          'method2'=> 'getPageHeading',
+          'method3'=> 'getAddDealerTable',
+          'method4'=> 'getSuccessMsg'
+        ),
+        'get_user_request_form' => array(
+          'object' => 'Admin',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getUserRequestTable'
+        ),
+        'add_user_req_row' => array(
+          'object' => 'Admin',
+          'method1'=> 'addUserRequestRow'
+        ),
+        'get_dealer_info_js' => array(
+          'object' => 'DealerInfo',
+          'method1'=> 'getDealerListing'
+        ),
+        'process_user_setup_request' => array(
+          'object' => 'Admin',
+          'method1'=> 'processUserSetupRequest',
+          'method2'=> 'getPageHeading',
+          'method3'=> 'getUserRequestTable',
+          'method4'=> 'getSuccessMsg'
+        ),
+        'view_user_setup_requests' => array(
+          'object' => 'Admin',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getUserRequestTable'
+        ),
+        'approve_user_setup_requests' => array(
+          'object' => 'Admin',
+          'method1'=> 'processUserSetupApprovals',
+          'method2'=> 'getPageHeading',
+          'method3'=> 'getUserRequestTable',
+          'method4'=> 'getSuccessMsg'
+        ),
+        'add_new_user_table' => array(
+          'object' => 'Admin',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getAddUserTable'
+        ),
+        'add_new_user_row' => array(
+          'object' => 'Admin',
+          'method1'=> 'getAddUserTable'
+        ),
+        'add_new_users' => array(
+          'object' => 'Admin',
+          'method1'=> 'processAddNewUsers',
+          'method2'=> 'getPageHeading',
+          'method3'=> 'getAddUserTable',
+          'method4'=> 'getSuccessMsg'
+        ),
+        'check_username_dupe' => array(
+          'object' => 'Admin',
+          'method1'=> 'checkUsernameDupe'
+        ),
+        'view_dealer_users' => array(
+          'object' => 'Admin',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getUserTable'
+        ),
+        'view_sos_users' => array(
+          'object' => 'Admin',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getUserTable'
+        ),
+        'view_manuf_users' => array(
+          'object' => 'Admin',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getUserTable'
+        ),
+        'table_user_edit_select' => array(
+          'object' => 'Admin',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getAddUserTable'
+        ),
+        'table_dealer_edit_select' => array(
+          'object' => 'DealerInfo',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getAddDealerTable'
+        ),
+        'add_doc_link' => array(
+          'object' => 'Documents',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getFileUploadForm'
+        ),
+        'file_submit' => array(
+          'object' => 'Documents',
+          'method1'=> 'processFileUpload',
+          'method2'=> 'getPageHeading',
+          'method3'=> 'getFileUploadForm',
+          'method4'=> 'getSuccessMsg'
+        ),
+        'view_doc_link' => array(
+          'object' => 'Documents',
+          'method1'=> 'getDocTable',
+          'method2'=> 'getPageHeading'
+        ),
+        'view_doc_table' => array(
+          'object' => 'Documents',
+          'method1'=> 'getDocTable',
+          'method2'=> 'getPageHeading'
+        ),
+        'table_doc_select' => array(
+          'object' => 'Documents',
+          'method1'=> 'viewFile'
+        ),
+        'delete_doc' => array(
+          'object' => 'Documents',
+          'method1'=> 'deleteDoc',
+          'method2'=> 'getDocTable',
+          'method3'=> 'getPageHeading',
+          'method4'=> 'getSuccessMsg'
+        ),
+        'edit_doc_form' => array(
+          'object' => 'Documents',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getFileUploadForm'
+        ),
+        'file_update_submit' => array(
+          'object' => 'Documents',
+          'method1'=> 'updateDoc',
+          'method2'=> 'getDocTable',
+          'method3'=> 'getPageHeading',
+          'method4'=> 'getSuccessMsg'
+        ),
+        'contact_us_link' => array(
+          'object' => 'ContactUs',
+          'method1'=> 'getPageHeading',
+          'method2'=> 'getContactForm'
+        ),
+        'contact_us_submit' => array(
+          'object' => 'ContactUs',
+          'method1'=> 'processContactForm',
+          'method2'=> 'getPageHeading',
+          'method3'=> 'getSuccessMsg',
+          'method4'=> 'getContactForm'
+        )
+      );
+
 	// Make sure the requested action exists in the lookup array
 	if (isset($actions[$_POST['action']])) {
 		if($_POST['action'] == 'ro_entry') {
