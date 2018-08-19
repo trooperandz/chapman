@@ -861,8 +861,8 @@ if(verifyUserLoginAjax()) {
 
 		if($_POST['action'] == 'get_dealer_info_js') {
 			// Make sure to make the result js-compatible
-      // $testObj = new DealerInfo()
-      echo json_encode(new DealerInfo()->getDealerListing());
+      $testObj = new DealerInfo($dbo = null);
+      echo json_encode($testObj->getDealerListing());
 			// echo json_encode($obj->$use_array['method1']());
 		}
 
