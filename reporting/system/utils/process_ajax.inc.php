@@ -19,14 +19,14 @@
 include_once '../config/init.inc.php';
 
 // Establish classes
-$Admin = new Admin();
-$Welr = new Welr();
-$Metrics = new Metrics();
-$Stats = new Stats();
-$SurveysSummary = new SurveysSummary();
-$DealerInfo = new DealerInfo();
-$Documents = new Documents();
-$ContactUs = new ContactUs();
+$Admin = new Admin($dbo = null);
+$Welr = new Welr($dbo = null);
+$Metrics = new Metrics($dbo = null);
+$Stats = new Stats($dbo = null);
+$SurveysSummary = new SurveysSummary($dbo = null);
+$DealerInfo = new DealerInfo($dbo = null);
+$Documents = new Documents($dbo = null);
+$ContactUs = new ContactUs($dbo = null);
 
 /* This is for testing.  Try to put non-session AJAX processes here, before the verifyUserLoginAjax() code */
 if(isset($_POST['no_session'])) {
