@@ -123,6 +123,8 @@ exit;
 }
 
 function processRoEntry() {
+  $Welr = new Welr($dbo = null);
+
   // Prevent undefined index notices from service arrays
   $svc_reg = (isset($_POST['svc_reg'])) ? $_POST['svc_reg'] : null;
   $svc_add = (isset($_POST['svc_add'])) ? $_POST['svc_add'] : null;
@@ -150,6 +152,8 @@ function processRoEntry() {
 }
 
 function renderRoEditForm() {
+  $Welr = new Welr($dbo = null);
+
   // Set $_SESSION['update_ronumber'] for future checking of ro update form. Do not forget to unset later
   $_SESSION['update_ronumber'] = $_POST['ro_number'];
 
@@ -179,6 +183,8 @@ function renderRoEditForm() {
 }
 
 function viewRosByMonth() {
+  $Welr = new Welr($dbo = null);
+
   // Set dates to current month to date
   $_SESSION['ro_date_range1'] = date("Y-m-01");
   $_SESSION['ro_date_range2'] = date("Y-m-d");
@@ -200,6 +206,8 @@ function viewRosByMonth() {
 }
 
 function viewAllRos() {
+  $Welr = new Welr($dbo = null);
+  
   $pageArr = array(
     'page_title'=>'Repair Order Listing (All History)', 
     'ro_count'=>true, 
