@@ -148,7 +148,43 @@ function processRoEntry() {
     'search_params'=>false
   );
   
-  echo $Welr->processRoEntry($postArr);
+  return $Welr->processRoEntry($postArr);
+}
+
+function renderRoEnteryForm() {
+  $Welr = new Welr($dbo = null);
+  $returnHtml = '';
+
+  $pageArr = array(
+    'page_title'=>'Enter Repair Orders', 
+    'ro_count'=>true, 
+    'entry_form'=>true, 
+    'update_form'=>false,
+    'dealer_id'=>$_SESSION['dealer_id'], 
+    'dealer_code'=>$_SESSION['dealer_code'],
+    'print-icon'=>false, 
+    'export-icon'=>false
+  );
+
+  $paramsArr = array(
+    'entry_form' => true, 
+    'date_range' => false, 
+    'search_params' => false
+  );
+
+  $returnHtml .= $Welr->getPageHeading($pageArr);
+
+  // Only show the 'Select Advisor' dropdown if user is SOS or Dealer admin type
+  if ($_SESSION['user']['user_type_id'] == 1 
+    || ($_SESSION['user']['user_type_id'] == 3 && $_SESSION['user']['user_admin'] == 1)
+  ) {
+    $returnHtml .= $Welr->getAdvisorDropdown();
+  }
+
+  $returnHtml .= $Welr->getRoEntryForm($update_form = false, $update_ro_id = null, $search_params = false)
+    .$Welr->getRoEntryTable($paramArr);
+
+  return $returnHtml;
 }
 
 function renderRoEditForm() {
@@ -177,7 +213,7 @@ function renderRoEditForm() {
     'search_params' => false
   );
 
-  echo $Welr->getPageHeading($pageArr)
+  return $Welr->getPageHeading($pageArr)
     .$Welr->getRoEntryForm($update_form = true, $update_ro_id = $_POST['ro_id'], $search_params = false)
     .$Welr->getRoEntryTable($paramArr);
 }
@@ -202,12 +238,12 @@ function viewRosByMonth() {
     'search_params' => false
   );
 
-  echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
+  return $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
 }
 
 function viewAllRos() {
   $Welr = new Welr($dbo = null);
-  
+
   $pageArr = array(
     'page_title'=>'Repair Order Listing (All History)', 
     'ro_count'=>true, 
@@ -227,7 +263,522 @@ function viewAllRos() {
     'search_params' => false
   );
 
-  echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
+  return $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
+}
+
+function getRoSearchResults() {
+  $Welr = new Welr($dbo = null);
+
+  $pageArr = array(
+    'page_title'=>'Repair Order Search Results', 
+    'ro_count'=>false, 
+    'entry_form'=>false, 
+    'update_form'=>false,
+    'dealer_id'=>$_SESSION['dealer_id'], 
+    'dealer_code'=>$_SESSION['dealer_code'],
+    'print-icon'=>true, 
+    'export-icon'=>true
+  );
+
+  $postArr = array(
+    'entry_form' => false, 
+    'date_range' => false, 
+    'search_params' => array(
+      'ro_params'=>$_POST['ro_params'], 
+      'svc_reg'=>$_POST['svc_reg'], 
+      'svc_add'=>$_POST['svc_add'], 
+      'svc_dec'=>$_POST['svc_dec'], 
+      'svc_exclude'=>$_POST['svc_exclude']
+    )
+  );
+
+  return $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($postArr);
+}
+
+/**
+* Possible metrics search options include the following:
+* dealer, dealer group, area, region, district, all dealers
+* Leave these out of the original array, and then use foreach to add search items to array
+*/
+function getMetricsSearchResults() {
+  $Metrics = new Metrics($dbo = null);
+
+  $metrics_params = json_decode($_POST['metrics_params'], true);
+
+  $array = array(
+    'page_title'=>'View Metrics - ', 
+    'title_info'=>'Filtered Results', 
+    'ro_count'=>true,
+    'metrics_table'=>'L1', 
+    'metrics_month'=>false, 
+    'metrics_search'=>true,
+    'print-icon'=>true, 
+    'export-icon'=>true, 
+    'a_id'=>false
+  );
+
+  // Now add $metrics_params to $array for submission to class methods
+  foreach($metrics_params as $key=>$value) {
+    $array[$key] = $value;
+  }
+
+  // If dates were entered as search params, set $array['date_range'] = true, create sql-compatible format and add to $array for passing to methods
+  if($array['date1_pres']) {
+    $array['date_range'] = true;
+    $date = new DateTime($array['date1_pres']);
+    $array['date1_sql'] = $date->format("Y-m-d");
+    $date = new DateTime($array['date2_pres']);
+    $array['date2_sql'] = $date->format("Y-m-d");
+  }
+
+  // If only dates and/or date fields were entered, add 'Dealer: Name + Code' to search_feedback string so user knows which dealer the info pertains to
+  if (($array['date1_pres'] &&  $array['date2_pres'] &&  $array['advisor_id']) 
+    || ( $array['date1_pres'] &&  $array['date2_pres'] && !$array['advisor_id']) 
+    || (!$array['date1_pres'] && !$array['date2_pres'] &&  $array['advisor_id'])
+  ) {
+    if (!$array['region_id'] 
+      && !$array['area_id'] 
+      && !$array['district_id'] 
+      && !$array['dealer_group']
+    ) {
+      $array['search_feedback'] .= 'Dealer: '.$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')';
+    }
+  }
+
+  // Create $array copy and change value of 'metrics_table' so that correct L2_3 table data is generated
+  $array2 = array();
+  foreach($array as $key=>$value) {
+    if($key == 'metrics_table') {
+      $array2[$key] = 'L2_3';
+    } else {
+      $array2[$key] = $value;
+    }
+  }
+
+  /* If dates only were selected (and no region, district, etc):
+   * Pass 'dealer_id' param SESSION var as default UNLESS
+   * 'View All Dealers' has been checked
+  **/
+  if(!$array['region_id'] 
+    && !$array['area_id'] 
+    && !$array['district_id'] 
+    && !$array['dealer_group']
+  ) {
+    if (!$array['all_dealers_checkbox']) {
+      $array['dealer_id'] = $_SESSION['dealer_id'];
+    }
+  }
+
+  return $Metrics->getPageHeading($array)
+    .$Metrics->getMetricsTable($array)
+    .$Metrics->getLaborPartsTable($array)
+    .$Metrics->getMetricsTable($array2);
+}
+
+/**
+* Possible dealer comp filter options include the following:
+* date range, dealer group
+* Leave these out of the original array, and then use foreach to add search items to array
+*/
+function getMetricsDealerComparison() {
+  $Metrics = new Metrics($dbo = null);
+
+  $params = json_decode($_POST['params'], true);
+
+  $array = array(
+    'page_title'=>'View Metrics - ',
+    'title_info'=>'Dealer Comparison Data', 
+    'ro_count'=>false,
+    'metrics_search'=>true, 
+    'print-icon'=>true, 
+    'export-icon'=>true, 
+    'a_id'=>false
+  );
+
+  // Now add $params to $array for submission to class methods
+  foreach($params as $key=>$value) {
+    $array[$key] = $value;
+  }
+
+  // If dates were entered as params, set $array['date_range'] = true, create sql-compatible format and add to $array for passing to methods
+  if($array['date1_pres']) {
+    $array['date_range'] = true;
+    $date = new DateTime($array['date1_pres']);
+    $array['date1_sql'] = $date->format("Y-m-d");
+    $date = new DateTime($array['date2_pres']);
+    $array['date2_sql'] = $date->format("Y-m-d");
+  }
+
+  return $Metrics->getPageHeading($array).$Metrics->getMetricsDlrCompTable($array);
+}
+
+getDealerMetricsAllHistory() {
+  $Metrics = new Metrics($dbo = null);
+
+  $array = array(
+    'page_title'=>'View Metrics (All History) - ', 
+    'title_info'=>$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')',
+    'ro_count'=>true, 
+    'metrics_table'=>'L1', 
+    'dealer_group'=>false, 
+    'dealer_id'=>$_SESSION['dealer_id'],
+    'date_range'=>false, 
+    'metrics_month'=>false, 
+    'metrics_search'=>false, 
+    'advisor_id'=>false,
+    'district_id'=>false, 
+    'area_id'=>false, 
+    'region_id'=>false, 
+    'search_feedback'=> 'Showing: All History',
+    'export_feedback'=> array(
+      'Dealer: '.$_SESSION['dealer_code'], 
+      'Showing: All History'
+    ),
+    'print-icon'=>true, 
+    'export-icon'=>true, 
+    'a_id'=>false
+  );
+
+  // Create $array copy and change value of 'metrics_table' so that correct L2_3 table data is generated
+  $array2 = array();
+  foreach($array as $key=>$value) {
+    if($key == 'metrics_table') {
+      $array2[$key] = 'L2_3';
+    } else {
+      $array2[$key] = $value;
+    }
+  }
+
+  return $Metrics->getPageHeading($array)
+    .$Metrics->getMetricsTable($array)
+    .$Metrics->getLaborPartsTable($array)
+    .$Metrics->getMetricsTable($array2);
+}
+
+function getDealerMetricsCurrentMonth() {
+  $Metrics = new Metrics($dbo = null);
+
+  // Set dates to month to date
+  $_SESSION['metrics_month_date1_sql'] = date("Y-m-01");
+  $_SESSION['metrics_month_date2_sql'] = date("Y-m-d");
+  $_SESSION['metrics_month_date1_pres']= $date1 = date("m-01-y");
+  $_SESSION['metrics_month_date2_pres']= $date2 = date("m-d-y");
+
+  // If action was 'dealer_summary_select' or 'change_dealer_globals', change dealer SESSION vars
+  if ($_POST['action'] == 'dealer_summary_select' || $_POST['action'] == 'change_dealer_globals') {
+    $_SESSION['dealer_id'] = $_POST['dealer_id'];
+    $_SESSION['dealer_code'] = $_POST['dealer_code'];
+    $_SESSION['dealer_name'] = $_POST['dealer_name'];
+  }
+
+  $array = array(
+    'page_title'=>'View Metrics (Month To Date) - ', 
+    'title_info'=>$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')',
+    'ro_count'=>true, 
+    'metrics_table'=>'L1', 
+    'dealer_group'=>false, 
+    'dealer_id'=>$_SESSION['dealer_id'],
+    'date_range'=>true, 
+    'metrics_month'=>true, 
+    'metrics_search'=>false, 
+    'advisor_id'=>false,
+    'district_id'=>false, 
+    'area_id'=>false, 
+    'region_id'=>false, 
+    'search_feedback'=> 'Date Range: '.$date1.' through '.$date2,
+    'export_feedback'=> array(
+      'Dealer: '.$_SESSION['dealer_code'], 
+      'Date Range: '.$date1.' through '.$date2
+    ),
+    'print-icon'=>true, 
+    'export-icon'=>true, 
+    'a_id'=>false
+  );
+
+  // Create $array copy and change value of 'metrics_table' so that correct L2_3 table data is generated
+  $array2 = array();
+  foreach($array as $key=>$value) {
+    if($key == 'metrics_table') {
+      $array2[$key] = 'L2_3';
+    } else {
+      $array2[$key] = $value;
+    }
+  }
+
+  return $Metrics->getPageHeading($array)
+    .$Metrics->getMetricsTable($array)
+    .$Metrics->getLaborPartsTable($array)
+    .$Metrics->getMetricsTable($array2);
+}
+
+/**
+ * Possible search options include the following:
+ * dealer group, area, region, district
+ * Leave these out of the original array, and then use foreach to add search items to array
+ */
+function getMetricsTrendReport() {
+  $Metrics = new Metrics($dbo = null);
+
+  // Use json_decode to turn JS params into array
+  $params = json_decode($_POST['params'], true);
+
+  // Add the page title and make sure that misc $array params are set for success
+  $array = array(
+    'page_title'=>'View Metrics - ', 
+    'title_info'=>'Trending By Month', 
+    'ro_count'=>false,
+    'stats_month'=>false, 
+    'stats_search'=>false, 
+    'metrics_trends'=>true,
+    'print-icon'=>true, 
+    'export-icon'=>true, 
+    'a_id'=>false
+  );
+
+  // Now add $params to $array for submission to class methods
+  foreach($params as $key=>$value) {
+    $array[$key] = $value;
+  }
+
+  // If dates were entered as search params, set $array['date_range'] = true, create sql-compatible format and add to $array for passing to methods
+  if($array['date1_pres']) {
+    $array['date_range'] = true;
+    $date = new DateTime($array['date1_pres']);
+    $array['date1_sql_user'] = $date->format("Y-m-d");
+    $date = new DateTime($array['date2_pres']);
+    $array['date2_sql_user'] = $date->format("Y-m-d");
+  }
+
+  /** 
+   * If dates only were selected (and no region, district, dealer group etc):
+   * Pass 'dealer_id' param SESSION var as default UNLESS
+   * 'View All Dealers' has been checked
+   */
+  if (!$array['region_id'] 
+    && !$array['area_id'] 
+    && !$array['district_id'] 
+    && !$array['dealer_group']
+  ) {
+    if (!$array['all_dealers_checkbox']) {
+      $array['dealer_id'] = $_SESSION['dealer_id'];
+      // Push dealer info string to search feedback message
+      $array['search_feedback'] .= "Dealer = ".$_SESSION['dealer_name']." (".$_SESSION['dealer_code'].") | ";
+    }
+  }
+
+  return $Metrics->getPageHeading($array).$Metrics->getMetricsTrendTable($array);
+}
+
+function getDealerStatsCurrentMonth() {
+  $Stats = new Stats($dbo = null);
+
+  // Set dates to month to date
+  $_SESSION['stats_month_date1_sql'] = date("Y-m-01");
+  $_SESSION['stats_month_date2_sql'] = date("Y-m-d");
+  $_SESSION['stats_month_date1_pres']= $date1 = date("m-01-y");
+  $_SESSION['stats_month_date2_pres']= $date2 = date("m-d-y");
+
+  $array = array(
+    'page_title'=>'View Statistics (Month To Date) - ', 
+    'title_info'=>$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')',
+    'ro_count'=>true, 
+    'dealer_group'=>false, 
+    'dealer_id'=>$_SESSION['dealer_id'],
+    'date_range'=>true, 
+    'stats_month'=>true, 
+    'stats_search'=>false, 
+    'advisor_id'=>false,
+    'district_id'=>false, 
+    'area_id'=>false, 
+    'region_id'=>false, 
+    'search_feedback'=> 'Date Range: '.$date1.' through '.$date2,
+    'print-icon'=>true, 
+    'export-icon'=>true, 
+    'a_id'=>false
+  );
+
+  return $Stats->getPageHeading($array)
+    .$Stats->getServiceLevelTable($array)
+    .$Stats->getLofTable($array)
+    .$Stats->getVehicleTable($array)
+    .$Stats->getYearModelTable($array)
+    .$Stats->getMileageTable($array)
+    .$Stats->getRoTrendTable($array);
+}
+
+function getDealerStatsAllHistory() {
+  $Stats = new Stats($dbo = null);
+
+  $array = array(
+    'page_title'=>'View Statistics (All History) - ', 
+    'title_info'=>$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')',
+    'ro_count'=>true, 
+    'dealer_group'=>false, 
+    'dealer_id'=>$_SESSION['dealer_id'],
+    'date_range'=>false, 
+    'stats_month'=>false, 
+    'stats_search'=>false, 
+    'advisor_id'=>false,
+    'district_id'=>false, 
+    'area_id'=>false, 
+    'region_id'=>false, 
+    'search_feedback'=> 'Showing: All History',
+    'print-icon'=>true, 
+    'export-icon'=>true, 
+    'a_id'=>false
+  );
+
+  return $Stats->getPageHeading($array)
+    .$Stats->getServiceLevelTable($array)
+    .$Stats->getLofTable($array)
+    .$Stats->getVehicleTable($array)
+    .$Stats->getYearModelTable($array)
+    .$Stats->getMileageTable($array)
+    .$Stats->getRoTrendTable($array);
+}
+
+/**
+ * Possible search options include the following:
+ * dealer, dealer group, area, region, district
+ * Leave these out of the original array, and then use foreach to add search items to array
+ */
+function getDealerStatsSearchResults() {
+  $Stats = new Stats($dbo = null);
+
+  $search_params = json_decode($_POST['search_params'], true);
+
+  /* For testing
+  foreach($search_params as $key=>$value) {
+    echo '$array: '.$key.'=>'.$value.'<br>';
+  }
+  */
+
+  $array = array(
+    'page_title'=>'View Statistics - ', 
+    'title_info'=>'Filtered Results', 
+    'ro_count'=>true,
+    'stats_month'=>false, 
+    'stats_search'=>true, 
+    'print-icon'=>true, 
+    'export-icon'=>true, 
+    'a_id'=>false
+  );
+
+  // Now add $search_params to $array for submission to class methods
+  foreach($search_params as $key=>$value) {
+    $array[$key] = $value;
+  }
+
+  // If dates were entered as search params, set $array['date_range'] = true, create sql-compatible format and add to $array for passing to methods
+  if($array['date1_pres']) {
+    $array['date_range'] = true;
+    $date = new DateTime($array['date1_pres']);
+    $array['date1_sql'] = $date->format("Y-m-d");
+    $date = new DateTime($array['date2_pres']);
+    $array['date2_sql'] = $date->format("Y-m-d");
+  }
+
+  // If only dates and/or date fields were entered, add 'Dealer: Name + Code' to search_feedback
+  // string so user knows which dealer the info pertains to
+  if (($array['date1_pres'] &&  $array['date2_pres'] &&  $array['advisor_id']) 
+    || ( $array['date1_pres'] &&  $array['date2_pres'] && !$array['advisor_id']) 
+    || (!$array['date1_pres'] && !$array['date2_pres'] &&  $array['advisor_id'])
+  ) {
+    if (!$array['region_id'] 
+      && !$array['area_id'] 
+      && !$array['district_id'] 
+      && !$array['dealer_group']
+    ) {
+      $array['search_feedback'] .= 'Dealer: '.$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')';
+    }
+  }
+
+  /** 
+   * If dates only were selected (and no region, district, etc):
+   * Pass 'dealer_id' param SESSION var as default UNLESS
+   * 'View All Dealers' has been checked
+   */
+  if (!$array['region_id'] 
+    && !$array['area_id'] 
+    && !$array['district_id'] 
+    && !$array['dealer_group']
+  ) {
+    if (!$array['all_dealers_checkbox']) {
+      $array['dealer_id'] = $_SESSION['dealer_id'];
+    }
+  }
+
+  return $Stats->getPageHeading($array)
+    .$Stats->getServiceLevelTable($array)
+    .$Stats->getLofTable($array)
+    .$Stats->getVehicleTable($array)
+    .$Stats->getYearModelTable($array)
+    .$Stats->getMileageTable($array)
+    .$Stats->getRoTrendTable($array);
+}
+
+function getAllDealersSummaryResults() {
+  $SurveysSummary = new SurveysSummary($dbo = null);
+
+  $pageArr = array(
+    'ro_count'=>true, 
+    'page_title'=>'Dealer Reporting Summary', 
+    'export-icon'=>true, 
+    'print-icon'=>true
+  );
+
+  // Run 'method2' first so that dealer count is available as SESSION['dealer_summary_count'] var
+  $table = $SurveysSummary->getDealerSummaryTable();
+
+  return $SurveysSummary->getPageHeading().$table;
+}
+
+function getDealerListingView() {
+  $DealerInfo = new DealerInfo($dbo = null);
+
+  $array = array(
+    'page_title'=>'Manage Dealers - ', 
+    'title_info'=>'All '.MANUF.' Dealers',
+    'a_id'=>'add_dealer_link', 
+    'link_msg'=>'Add New Dealer', 
+    'dealer_count'=>true,
+    'print-icon'=>true, 
+    'export-icon'=>true
+  );
+
+  // Run getDealerListingTable() method first so that $_SESSION['dealer_count'] may be used in title etc.
+  $dealerTable = $DealerInfo->getDealerListingTable($array);
+
+  return $DealerInfo->getPageHeading($array).$dealerTable;
+}
+
+function getAddDealerForm() {
+  $DealerInfo = new DealerInfo($dbo = null);
+
+  $pageArr = array(
+    'page_title'=>'Manage Dealers - ', 
+    'title_info'=>'Add New Dealers', 
+    'a_id'=>false, 
+    'link_msg'=>false, 
+    'dealer_count'=>false
+  );
+
+  $tableArr = array(
+    'edit_dealer_val'=>false, 
+    'a_id'=>'add_dealer_row', 
+    'link_msg'=>'Add Row'
+  );
+
+  return $DealerInfo->getPageHeading($pageArr).$DealerInfo->getAddDealerTable($tableArr);
+}
+
+function getAddNewDealerRow() {
+  $paramsArr = array(
+    'add_dealer_row'=>true, 
+    'edit_dealer_val'=>false
+  );
+
+  return $DealerInfo->getAddDealerTable($paramsArr);
 }
 
 /* Make sure that user is logged in before any actions occur. If not, return 'error_login'
@@ -240,635 +791,66 @@ if(verifyUserLoginAjax()) {
 	if (isset($_POST['action'])) {
     switch($_POST['action']) {
       case 'ro_entry':
-        processRoEntry();
+        echo processRoEntry();
         break;
       case 'update_ro_form':
-        renderRoEditForm();
+        echo renderRoEditForm();
         break;
       case 'view_ros_month':
-        viewRosByMonth();
+        echo viewRosByMonth();
         break;
       case 'view_ros_all':
-        viewAllRos();
+        echo viewAllRos();
+        break;
+      case 'enter_ros':
+        echo renderRoEnteryForm();
+        break;
+      case 'ro_search':
+        echo getRoSearchResults();
+        break;
+      case 'metrics_search':
+        echo getMetricsSearchResults();
+        break;
+      case 'metrics_dlr_comp':
+        echo getMetricsDealerComparison();
+        break;
+      case 'view_metrics_all':
+        echo getDealerMetricsAllHistory();
+        break;
+      case 'view_metrics_month':
+        echo getDealerMetricsCurrentMonth();
+        break;
+      case 'dealer_summary_select':
+        echo getDealerMetricsCurrentMonth();
+        break;
+      case 'change_dealer_globals':
+        echo getDealerMetricsCurrentMonth();
+        break;
+      case 'metrics_trend':
+        echo getMetricsTrendReport();
+        break;
+      case 'view_stats_month':
+        echo getDealerStatsCurrentMonth();
+        break;
+      case 'view_stats_all':
+        echo getDealerStatsAllHistory();
+        break;
+      case 'stats_search':
+        echo getDealerStatsSearchResults();
+        break;
+      case 'dealer_summary':
+        echo getAllDealersSummaryResults();
+        break;
+      case 'view_dealer_list_all':
+        echo getDealerListingView();
+        break;
+      case 'get_dealer_add_form':
+        echo getAddDealerForm();
+        break;
+      case 'add_dealer_row':
+        echo getAddNewDealerRow();
         break;
     }
-		// if($_POST['action'] == 'ro_entry') {
-		// 	// Prevent undefined index notices from service arrays
-		// 	$svc_reg = (isset($_POST['svc_reg'])) ? $_POST['svc_reg'] : null;
-		// 	$svc_add = (isset($_POST['svc_add'])) ? $_POST['svc_add'] : null;
-		// 	$svc_dec = (isset($_POST['svc_dec'])) ? $_POST['svc_dec'] : null;
-
-		// 	$postArr = array(
-  //       'submit_name'=>$_POST['submit_name'], 
-  //       'ronumber'=>$_POST['ronumber'], 
-  //       'ro_date'=>$_POST['ro_date'],
-		// 		'yearmodel'=>$_POST['yearmodel'], 
-  //       'mileage'=>$_POST['mileage'], 
-  //       'vehicle'=>$_POST['vehicle'], 
-  //       'labor'=>$_POST['labor'],
-		// 		'parts'=>$_POST['parts'], 
-  //       'dealer_id'=>$_SESSION['dealer_id'], 
-  //       'comment'=>$_POST['comment'], 
-  //       'svc_reg'=>$svc_reg,
-		// 		'svc_add'=>$svc_add, 
-  //       'svc_dec'=>$svc_dec, 
-  //       'svc_hidden'=>$_POST['svc_hidden'], 
-  //       'search_params'=>false
-  //     );
-
-		// 	echo $Welr->processRoEntry($postArr);
-		// }
-
-		// if ($_POST['action'] == 'update_ro_form') {
-		// 	// Set $_SESSION['update_ronumber'] for future checking of ro update form. Do not forget to unset later
-		// 	$_SESSION['update_ronumber'] = $_POST['ro_number'];
-
-		// 	// Set $_SESSION['update_ro_id'] for updating of repairorder_welr record. Do not forget to unset later
-		// 	$_SESSION['update_ro_id'] = $_POST['ro_id'];
-
-		// 	$pageArr = array(
-  //       'page_title'=>'Update Order', 
-  //       'ro_count'=>true, 
-  //       'entry_form'=>true, 
-  //       'update_form'=>true,
-		// 		'dealer_id'=>$_SESSION['dealer_id'], 
-  //       'dealer_code'=>$_SESSION['dealer_code'],
-		// 		'print-icon'=>false, 
-  //       'export-icon'=>false
-  //     );
-
-  //     $paramArr = array(
-  //       'entry_form' => true, 
-  //       'date_range' => false, 
-  //       'search_params' => false
-  //     );
-
-		// 	echo $Welr->getPageHeading($pageArr)
-  //       .$Welr->getRoEntryForm($update_form = true, $update_ro_id = $_POST['ro_id'], $search_params = false)
-  //       .$Welr->getRoEntryTable($paramArr);
-		// }
-
-		// if ($_POST['action'] == 'view_ros_month') {
-		// 	// Set dates to current month to date
-		// 	$_SESSION['ro_date_range1'] = date("Y-m-01");
-		// 	$_SESSION['ro_date_range2'] = date("Y-m-d");
-
-		// 	$date1 = date("m/d/y", strtotime(date("Y-m-01")));
-		// 	$date2 = date("m/d/y", strtotime(date("Y-m-d")));
-
-		// 	$pageArr = array('page_title'=>'Repair Order Listing ('.$date1.' - '.$date2.')', 'ro_count'=>true, 'entry_form'=>false,
-		// 				   'update_form'=>false, 'dealer_id'=>$_SESSION['dealer_id'], 'dealer_code'=>$_SESSION['dealer_code'],
-		// 				   'date_range'=>true, 'print-icon'=>true, 'export-icon'=>true);
-
-  //     $paramsArr = array(
-  //       'entry_form' => false, 
-  //       'date_range' => true, 
-  //       'search_params' => false
-  //     );
-
-		// 	echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
-		// }
-
-		// if ($_POST['action'] == 'view_ros_all') {
-		// 	$pageArr = array(
-  //       'page_title'=>'Repair Order Listing (All History)', 
-  //       'ro_count'=>true, 
-  //       'entry_form'=>false,
-		// 		'update_form'=>false, 
-  //       'dealer_id'=>$_SESSION['dealer_id'], 
-  //       'dealer_code'=>$_SESSION['dealer_code'],
-		// 		'date_range'=>false, 
-  //       'search_params'=>false, 
-  //       'print-icon'=>true, 
-  //       'export-icon'=>true
-  //     );
-
-  //     $paramsArr = array(
-  //       'entry_form' => false, 
-  //       'date_range' => false, 
-  //       'search_params' => false
-  //     );
-
-		// 	echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($paramsArr);
-		// }
-
-		if($_POST['action'] == 'enter_ros') {
-			$pageArr = array(
-        'page_title'=>'Enter Repair Orders', 
-        'ro_count'=>true, 
-        'entry_form'=>true, 
-        'update_form'=>false,
-				'dealer_id'=>$_SESSION['dealer_id'], 
-        'dealer_code'=>$_SESSION['dealer_code'],
-				'print-icon'=>false, 
-        'export-icon'=>false
-      );
-
-      $paramsArr = array(
-        'entry_form' => true, 
-        'date_range' => false, 
-        'search_params' => false
-      );
-
-			echo $Welr->getPageHeading($pageArr);
-
-			// Only show the 'Select Advisor' dropdown if user is SOS or Dealer admin type
-			if ($_SESSION['user']['user_type_id'] == 1 
-        || ($_SESSION['user']['user_type_id'] == 3 && $_SESSION['user']['user_admin'] == 1)
-      ) {
-				echo $Welr->getAdvisorDropdown();
-			}
-				echo $Welr->getRoEntryForm($update_form = false, $update_ro_id = null, $search_params = false)
-          .$Welr->getRoEntryTable($paramArr);
-		}
-
-		if ($_POST['action'] == 'ro_search') {
-			$pageArr = array(
-        'page_title'=>'Repair Order Search Results', 
-        'ro_count'=>false, 
-        'entry_form'=>false, 
-        'update_form'=>false,
-				'dealer_id'=>$_SESSION['dealer_id'], 
-        'dealer_code'=>$_SESSION['dealer_code'],
-				'print-icon'=>true, 
-        'export-icon'=>true
-      );
-
-      $postArr = array(
-        'entry_form' => false, 
-        'date_range' => false, 
-        'search_params' => array(
-          'ro_params'=>$_POST['ro_params'], 
-          'svc_reg'=>$_POST['svc_reg'], 
-          'svc_add'=>$_POST['svc_add'], 
-          'svc_dec'=>$_POST['svc_dec'], 
-          'svc_exclude'=>$_POST['svc_exclude']
-        )
-      );
-
-			echo $Welr->getPageHeading($pageArr).$Welr->getRoEntryTable($postArr);
-		}
-
-		if($_POST['action'] == 'metrics_search') {
-			/* Possible metrics search options include the following:
-			 * dealer, dealer group, area, region, district, all dealers
-			 * Leave these out of the original array, and then use foreach to add search items to array
-			**/
-			//echo 'action: '.$_POST['action'].'<br>';
-			$metrics_params = json_decode($_POST['metrics_params'], true);
-
-			$array = array(
-        'page_title'=>'View Metrics - ', 
-        'title_info'=>'Filtered Results', 
-        'ro_count'=>true,
-			  'metrics_table'=>'L1', 
-        'metrics_month'=>false, 
-        'metrics_search'=>true,
-			  'print-icon'=>true, 
-        'export-icon'=>true, 
-        'a_id'=>false
-			);
-
-			// Now add $metrics_params to $array for submission to class methods
-			foreach($metrics_params as $key=>$value) {
-				$array[$key] = $value;
-			}
-
-			// If dates were entered as search params, set $array['date_range'] = true, create sql-compatible format and add to $array for passing to methods
-			if($array['date1_pres']) {
-				$array['date_range'] = true;
-				$date = new DateTime($array['date1_pres']);
-				$array['date1_sql'] = $date->format("Y-m-d");
-				$date = new DateTime($array['date2_pres']);
-				$array['date2_sql'] = $date->format("Y-m-d");
-			}
-
-			// If only dates and/or date fields were entered, add 'Dealer: Name + Code' to search_feedback string so user knows which dealer the info pertains to
-			if (($array['date1_pres'] &&  $array['date2_pres'] &&  $array['advisor_id']) 
-        || ( $array['date1_pres'] &&  $array['date2_pres'] && !$array['advisor_id']) 
-        || (!$array['date1_pres'] && !$array['date2_pres'] &&  $array['advisor_id'])
-      ) {
-				if (!$array['region_id'] 
-          && !$array['area_id'] 
-          && !$array['district_id'] 
-          && !$array['dealer_group']
-        ) {
-					$array['search_feedback'] .= 'Dealer: '.$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')';
-				}
-			}
-
-			// Create $array copy and change value of 'metrics_table' so that correct L2_3 table data is generated
-			$array2 = array();
-			foreach($array as $key=>$value) {
-				if($key == 'metrics_table') {
-					$array2[$key] = 'L2_3';
-				} else {
-					$array2[$key] = $value;
-				}
-			}
-
-			/* If dates only were selected (and no region, district, etc):
-			 * Pass 'dealer_id' param SESSION var as default UNLESS
-			 * 'View All Dealers' has been checked
-			**/
-			if(!$array['region_id'] 
-        && !$array['area_id'] 
-        && !$array['district_id'] 
-        && !$array['dealer_group']
-      ) {
-				if (!$array['all_dealers_checkbox']) {
-					$array['dealer_id'] = $_SESSION['dealer_id'];
-				}
-			}
-
-			echo $Metrics->getPageHeading($array)
-        .$Metrics->getMetricsTable($array)
-        .$Metrics->getLaborPartsTable($array)
-        .$Metrics->getMetricsTable($array2);
-		}
-
-		if ($_POST['action'] == 'metrics_dlr_comp') {
-			/* Possible dealer comp filter options include the following:
-			 * date range, dealer group
-			 * Leave these out of the original array, and then use foreach to add search items to array
-			**/
-			$params = json_decode($_POST['params'], true);
-
-			$array = array('page_title'=>'View Metrics - ','title_info'=>'Dealer Comparison Data', 'ro_count'=>false,
-						   'metrics_search'=>true, 'print-icon'=>true, 'export-icon'=>true, 'a_id'=>false
-						  );
-
-			// Now add $params to $array for submission to class methods
-			foreach($params as $key=>$value) {
-				$array[$key] = $value;
-			}
-
-			// If dates were entered as params, set $array['date_range'] = true, create sql-compatible format and add to $array for passing to methods
-			if($array['date1_pres']) {
-				$array['date_range'] = true;
-				$date = new DateTime($array['date1_pres']);
-				$array['date1_sql'] = $date->format("Y-m-d");
-				$date = new DateTime($array['date2_pres']);
-				$array['date2_sql'] = $date->format("Y-m-d");
-			}
-
-			echo $Metrics->getPageHeading($array).$Metrics->getMetricsDlrCompTable($array);
-		}
-
-		if ($_POST['action'] == 'view_metrics_all') {
-			$array = array(
-        'page_title'=>'View Metrics (All History) - ', 
-        'title_info'=>$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')',
-				'ro_count'=>true, 
-        'metrics_table'=>'L1', 
-        'dealer_group'=>false, 
-        'dealer_id'=>$_SESSION['dealer_id'],
-				'date_range'=>false, 
-        'metrics_month'=>false, 
-        'metrics_search'=>false, 
-        'advisor_id'=>false,
-				'district_id'=>false, 
-        'area_id'=>false, 
-        'region_id'=>false, 
-        'search_feedback'=> 'Showing: All History',
-				'export_feedback'=> array(
-          'Dealer: '.$_SESSION['dealer_code'], 
-          'Showing: All History'
-        ),
-				'print-icon'=>true, 
-        'export-icon'=>true, 
-        'a_id'=>false
-			);
-
-			// Create $array copy and change value of 'metrics_table' so that correct L2_3 table data is generated
-			$array2 = array();
-			foreach($array as $key=>$value) {
-				if($key == 'metrics_table') {
-					$array2[$key] = 'L2_3';
-				} else {
-					$array2[$key] = $value;
-				}
-			}
-
-			echo $Metrics->getPageHeading($array)
-        .$Metrics->getMetricsTable($array)
-        .$Metrics->getLaborPartsTable($array)
-        .$Metrics->getMetricsTable($array2);
-		}
-
-		if ($_POST['action'] == 'view_metrics_month' 
-      || $_POST['action'] == 'dealer_summary_select' 
-      || $_POST['action'] == 'change_dealer_globals'
-    ) {
-			// Set dates to month to date
-			$_SESSION['metrics_month_date1_sql'] = date("Y-m-01");
-			$_SESSION['metrics_month_date2_sql'] = date("Y-m-d");
-			$_SESSION['metrics_month_date1_pres']= $date1 = date("m-01-y");
-			$_SESSION['metrics_month_date2_pres']= $date2 = date("m-d-y");
-
-			// If action was 'dealer_summary_select' or 'change_dealer_globals', change dealer SESSION vars
-			if ($_POST['action'] == 'dealer_summary_select' || $_POST['action'] == 'change_dealer_globals') {
-				$_SESSION['dealer_id'] = $_POST['dealer_id'];
-				$_SESSION['dealer_code'] = $_POST['dealer_code'];
-				$_SESSION['dealer_name'] = $_POST['dealer_name'];
-			}
-
-			$array = array(
-        'page_title'=>'View Metrics (Month To Date) - ', 
-        'title_info'=>$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')',
-			  'ro_count'=>true, 
-        'metrics_table'=>'L1', 
-        'dealer_group'=>false, 
-        'dealer_id'=>$_SESSION['dealer_id'],
-			  'date_range'=>true, 
-        'metrics_month'=>true, 
-        'metrics_search'=>false, 
-        'advisor_id'=>false,
-			  'district_id'=>false, 
-        'area_id'=>false, 
-        'region_id'=>false, 
-        'search_feedback'=> 'Date Range: '.$date1.' through '.$date2,
-			  'export_feedback'=> array(
-          'Dealer: '.$_SESSION['dealer_code'], 
-          'Date Range: '.$date1.' through '.$date2
-        ),
-			  'print-icon'=>true, 
-        'export-icon'=>true, 
-        'a_id'=>false
-			);
-
-			// Create $array copy and change value of 'metrics_table' so that correct L2_3 table data is generated
-			$array2 = array();
-			foreach($array as $key=>$value) {
-				if($key == 'metrics_table') {
-					$array2[$key] = 'L2_3';
-				} else {
-					$array2[$key] = $value;
-				}
-			}
-
-			echo $Metrics->getPageHeading($array)
-        .$Metrics->getMetricsTable($array)
-        .$Metrics->getLaborPartsTable($array)
-        .$Metrics->getMetricsTable($array2);
-		}
-
-		if ($_POST['action'] == 'metrics_trend') {
-			/* Possible search options include the following:
-			 * dealer group, area, region, district
-			 * Leave these out of the original array, and then use foreach to add search items to array
-			**/
-
-			// Use json_decode to turn JS params into array
-			$params = json_decode($_POST['params'], true);
-
-			// Add the page title and make sure that misc $array params are set for success
-			$array = array(
-        'page_title'=>'View Metrics - ', 
-        'title_info'=>'Trending By Month', 
-        'ro_count'=>false,
-				'stats_month'=>false, 
-        'stats_search'=>false, 
-        'metrics_trends'=>true,
-				'print-icon'=>true, 
-        'export-icon'=>true, 
-        'a_id'=>false
-			);
-
-			// Now add $params to $array for submission to class methods
-			foreach($params as $key=>$value) {
-				$array[$key] = $value;
-			}
-
-			// If dates were entered as search params, set $array['date_range'] = true, create sql-compatible format and add to $array for passing to methods
-			if($array['date1_pres']) {
-				$array['date_range'] = true;
-				$date = new DateTime($array['date1_pres']);
-				$array['date1_sql_user'] = $date->format("Y-m-d");
-				$date = new DateTime($array['date2_pres']);
-				$array['date2_sql_user'] = $date->format("Y-m-d");
-			}
-
-			/** 
-       * If dates only were selected (and no region, district, dealer group etc):
-			 * Pass 'dealer_id' param SESSION var as default UNLESS
-			 * 'View All Dealers' has been checked
-			 */
-			if (!$array['region_id'] 
-        && !$array['area_id'] 
-        && !$array['district_id'] 
-        && !$array['dealer_group']
-      ) {
-				if (!$array['all_dealers_checkbox']) {
-					$array['dealer_id'] = $_SESSION['dealer_id'];
-					// Push dealer info string to search feedback message
-					$array['search_feedback'] .= "Dealer = ".$_SESSION['dealer_name']." (".$_SESSION['dealer_code'].") | ";
-				}
-			}
-
-			echo $Metrics->getPageHeading($array).$Metrics->getMetricsTrendTable($array);
-		}
-
-		if ($_POST['action'] == 'view_stats_month') {
-			// Set dates to month to date
-			//$date1 = $date->format("Y-m-d");
-			$_SESSION['stats_month_date1_sql'] = date("Y-m-01");
-			$_SESSION['stats_month_date2_sql'] = date("Y-m-d");
-			$_SESSION['stats_month_date1_pres']= $date1 = date("m-01-y");
-			$_SESSION['stats_month_date2_pres']= $date2 = date("m-d-y");
-
-			$array = array(
-        'page_title'=>'View Statistics (Month To Date) - ', 
-        'title_info'=>$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')',
-			  'ro_count'=>true, 
-        'dealer_group'=>false, 
-        'dealer_id'=>$_SESSION['dealer_id'],
-			  'date_range'=>true, 
-        'stats_month'=>true, 
-        'stats_search'=>false, 
-        'advisor_id'=>false,
-			  'district_id'=>false, 
-        'area_id'=>false, 
-        'region_id'=>false, 
-        'search_feedback'=> 'Date Range: '.$date1.' through '.$date2,
-			  'print-icon'=>true, 
-        'export-icon'=>true, 
-        'a_id'=>false
-			);
-
-			echo $Stats->getPageHeading($array)
-        .$Stats->getServiceLevelTable($array)
-        .$Stats->getLofTable($array)
-        .$Stats->getVehicleTable($array)
-        .$Stats->getYearModelTable($array)
-        .$Stats->getMileageTable($array)
-        .$Stats->getRoTrendTable($array);
-		}
-
-		if ($_POST['action'] == 'view_stats_all') {
-			$array = array(
-        'page_title'=>'View Statistics (All History) - ', 
-        'title_info'=>$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')',
-			  'ro_count'=>true, 
-        'dealer_group'=>false, 
-        'dealer_id'=>$_SESSION['dealer_id'],
-			  'date_range'=>false, 
-        'stats_month'=>false, 
-        'stats_search'=>false, 
-        'advisor_id'=>false,
-			  'district_id'=>false, 
-        'area_id'=>false, 
-        'region_id'=>false, 
-        'search_feedback'=> 'Showing: All History',
-			  'print-icon'=>true, 
-        'export-icon'=>true, 
-        'a_id'=>false
-			);
-
-
-			echo $Stats->getPageHeading($array)
-        .$Stats->getServiceLevelTable($array)
-        .$Stats->getLofTable($array)
-        .$Stats->getVehicleTable($array)
-        .$Stats->getYearModelTable($array)
-        .$Stats->getMileageTable($array)
-        .$Stats->getRoTrendTable($array);
-		}
-
-		if ($_POST['action'] == 'stats_search') {
-			/* Possible search options include the following:
-			 * dealer, dealer group, area, region, district
-			 * Leave these out of the original array, and then use foreach to add search items to array
-			**/
-
-			$search_params = json_decode($_POST['search_params'], true);
-
-			/* For testing
-			foreach($search_params as $key=>$value) {
-				echo '$array: '.$key.'=>'.$value.'<br>';
-			}
-			*/
-
-			$array = array(
-        'page_title'=>'View Statistics - ', 
-        'title_info'=>'Filtered Results', 
-        'ro_count'=>true,
-				'stats_month'=>false, 
-        'stats_search'=>true, 
-        'print-icon'=>true, 
-        'export-icon'=>true, 
-        'a_id'=>false
-			);
-
-			// Now add $search_params to $array for submission to class methods
-			foreach($search_params as $key=>$value) {
-				$array[$key] = $value;
-			}
-
-			// If dates were entered as search params, set $array['date_range'] = true, create sql-compatible format and add to $array for passing to methods
-			if($array['date1_pres']) {
-				$array['date_range'] = true;
-				$date = new DateTime($array['date1_pres']);
-				$array['date1_sql'] = $date->format("Y-m-d");
-				$date = new DateTime($array['date2_pres']);
-				$array['date2_sql'] = $date->format("Y-m-d");
-			}
-
-			// If only dates and/or date fields were entered, add 'Dealer: Name + Code' to search_feedback string so user knows which dealer the info pertains to
-			if (($array['date1_pres'] &&  $array['date2_pres'] &&  $array['advisor_id']) 
-        || ( $array['date1_pres'] &&  $array['date2_pres'] && !$array['advisor_id']) 
-        || (!$array['date1_pres'] && !$array['date2_pres'] &&  $array['advisor_id'])
-      ) {
-				if (!$array['region_id'] 
-          && !$array['area_id'] 
-          && !$array['district_id'] 
-          && !$array['dealer_group']
-        ) {
-					$array['search_feedback'] .= 'Dealer: '.$_SESSION['dealer_name'].' ('.$_SESSION['dealer_code'].')';
-				}
-			}
-
-			/** 
-       * If dates only were selected (and no region, district, etc):
-			 * Pass 'dealer_id' param SESSION var as default UNLESS
-			 * 'View All Dealers' has been checked
-			 */
-			if (!$array['region_id'] 
-        && !$array['area_id'] 
-        && !$array['district_id'] 
-        && !$array['dealer_group']
-      ) {
-				if (!$array['all_dealers_checkbox']) {
-					$array['dealer_id'] = $_SESSION['dealer_id'];
-				}
-			}
-
-			echo $Stats->getPageHeading($array)
-        .$Stats->getServiceLevelTable($array)
-        .$Stats->getLofTable($array)
-        .$Stats->getVehicleTable($array)
-        .$Stats->getYearModelTable($array)
-        .$Stats->getMileageTable($array)
-        .$Stats->getRoTrendTable($array);
-		}
-
-		if ($_POST['action'] == 'dealer_summary') {
-      $pageArr = array(
-        'ro_count'=>true, 
-        'page_title'=>'Dealer Reporting Summary', 
-        'export-icon'=>true, 
-        'print-icon'=>true
-      );
-
-			// Run 'method2' first so that dealer count is available as SESSION['dealer_summary_count'] var
-      $table = $SurveysSummary->getDealerSummaryTable();
-
-			echo $SurveysSummary->getPageHeading().$table;
-		}
-
-		if ($_POST['action'] == 'view_dealer_list_all') {
-			$array = array(
-        'page_title'=>'Manage Dealers - ', 
-        'title_info'=>'All '.MANUF.' Dealers',
-				'a_id'=>'add_dealer_link', 
-        'link_msg'=>'Add New Dealer', 
-        'dealer_count'=>true,
-				'print-icon'=>true, 
-        'export-icon'=>true
-      );
-
-			// Run getDealerListingTable() method first so that $_SESSION['dealer_count'] may be used in title etc.
-      $dealerTable = $DealerInfo->getDealerListingTable($array);
-
-			echo $DealerInfo->getPageHeading($array).$dealerTable;
-		}
-
-		if ($_POST['action'] == 'get_dealer_add_form') {
-			$pageArr = array(
-        'page_title'=>'Manage Dealers - ', 
-        'title_info'=>'Add New Dealers', 
-        'a_id'=>false, 
-        'link_msg'=>false, 
-        'dealer_count'=>false
-      );
-
-      $tableArr = array(
-        'edit_dealer_val'=>false, 
-        'a_id'=>'add_dealer_row', 
-        'link_msg'=>'Add Row'
-      );
-
-			echo $DealerInfo->getPageHeading($pageArr).$DealerInfo->getAddDealerTable($tableArr);
-		}
-
-		if ($_POST['action'] == 'add_dealer_row') {
-      $paramsArr = array(
-        'add_dealer_row'=>true, 
-        'edit_dealer_val'=>false
-      );
-
-			echo $DealerInfo->getAddDealerTable($paramsArr);
-		}
 
 		if ($_POST['action'] == 'add_dealers') {
 			// remove after testing
