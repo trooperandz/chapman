@@ -571,7 +571,7 @@ function getMetricsDealerComparison() {
   return $Metrics->getPageHeading($array).$Metrics->getMetricsDlrCompTable($array);
 }
 
-getDealerMetricsAllHistory() {
+function getDealerMetricsAllHistory() {
   $Metrics = new Metrics($dbo = null);
 
   $array = array(
