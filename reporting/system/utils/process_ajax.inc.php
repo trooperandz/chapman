@@ -18,6 +18,16 @@
 // Include config file
 include_once '../config/init.inc.php';
 
+// Establish classes
+$Admin = new Admin($dbo = null);
+$Welr = new Welr($dbo = null);
+$Metrics = new Metrics($dbo = null);
+$Stats = new Stats($dbo = null);
+$SurveysSummary = new SurveysSummary($dbo = null);
+$DealerInfo = new DealerInfo($dbo = null);
+$Documents = new Documents($dbo = null);
+$ContactUs = new ContactUs($dbo = null);
+
 /* This is for testing.  Try to put non-session AJAX processes here, before the verifyUserLoginAjax() code */
 if(isset($_POST['no_session'])) {
 	if (isset($_POST['action'])) {
@@ -117,9 +127,10 @@ exit;
  * run a process, and they are not logged in, they need to be shown the 'error_login' message so
  * that they know they need to log in again.
 **/
-if(verifyUserLoginAjax()) {
+if (verifyUserLoginAjax()) {
   // Make sure the requested action exists in the lookup array
   if (isset($_POST['action'])) {
+    echo 'action: ', $_POST['action'];
     switch($_POST['action']) {
       case 'ro_entry':
         echo processRoEntry();
@@ -208,7 +219,7 @@ if(verifyUserLoginAjax()) {
       case 'process_user_setup_request':
         echo processUserSetupRequest();
         break;
-      case 'view_user_setup_requests';
+      case 'view_user_setup_requests':
         echo viewUserSetupRequests();
         break;
       case 'approve_user_setup_requests':
@@ -503,10 +514,10 @@ function getMetricsSearchResults() {
     }
   }
 
-  /* If dates only were selected (and no region, district, etc):
+  /** If dates only were selected (and no region, district, etc):
    * Pass 'dealer_id' param SESSION var as default UNLESS
    * 'View All Dealers' has been checked
-  **/
+   */
   if(!$array['region_id']
     && !$array['area_id']
     && !$array['district_id']
@@ -524,10 +535,10 @@ function getMetricsSearchResults() {
 }
 
 /**
-* Possible dealer comp filter options include the following:
-* date range, dealer group
-* Leave these out of the original array, and then use foreach to add search items to array
-*/
+ * Possible dealer comp filter options include the following:
+ * date range, dealer group
+ * Leave these out of the original array, and then use foreach to add search items to array
+ */
 function getMetricsDealerComparison() {
   $Metrics = new Metrics($dbo = null);
 
